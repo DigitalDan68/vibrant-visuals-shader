@@ -9,6 +9,9 @@ uniform int entityId;
 uniform ivec2 eyeBrightnessSmooth;
 uniform sampler2D gtexture;
 uniform sampler2D lightmap;
+#if defined GBUFFERS_HAND && HAND_DYNAMIC_LIGHTING >= 0
+layout(r32ui) uniform uimage2D enchantedHeldImage;
+#endif
 #if (defined GBUFFERS_TERRAIN || defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT || defined GBUFFERS_HAND) && !defined MOD_COLORWHEEL
    flat varying float integratedId;
    varying vec3 pbrNormal;
@@ -111,6 +114,12 @@ void main() {
    outlineUnlit = outlineItem && (outlineAlpha == 200.0 || outlineAlpha == 252.0 || outlineAlpha == 253.0);
    outlineUntinted = outlineAlpha == 200.0;
 #endif
+#if defined GBUFFERS_HAND && HAND_DYNAMIC_LIGHTING >= 0
+   // Outline packs replace vanilla glint with marked item texture pixels.
+   // Only held-item programs register these markers, never mobs or drops.
+   if (outlineUnlit && outlineTexture.a*outlineVertexColor.a > 0.01)
+      imageAtomicOr(enchantedHeldImage,ivec2(0),1u);
+#endif
    vec4 color  = color;
    bool resourceEntityFullbright=false;
    vec3 resourceEntityEmission=vec3(0.0);
@@ -206,6 +215,8 @@ void main() {
       if (integratedId >= 10496.0 && integratedId <= 10984.0) emit = warmPixel;
       if (integratedId == 42015.0) emit = 2.0;
       // Select saturated vein texels from the unlit texture, leaving dark bark intact.
+      if (integratedId >= 43201.0 && integratedId <= 43215.0)
+         emit = 1.5*(integratedId-43200.0)/15.0;
       if (integratedId == 43001.0)
          emit = smoothstep(0.32,0.55,albedo.r)*smoothstep(0.12,0.25,albedo.r-albedo.g);
       if (integratedId == 43002.0)
@@ -249,6 +260,11 @@ void main() {
       if (integratedId >= 30020.0 && integratedId <= 30022.0) pbrEmission = max(pbrEmission,PORTAL_EMISSION);
       if (integratedId == 42015.0) pbrEmission = max(pbrEmission,2.0*INTEGRATED_EMISSION);
       }
+      // Powered dust retains its requested glow even if a pack supplies
+      // only roughness/metal maps. Stronger pack emission still wins.
+      bool poweredDust = integratedId >= 43201.0 && integratedId <= 43215.0;
+      if (poweredDust)
+         pbrEmission=max(pbrEmission,1.5*(integratedId-43200.0)/15.0*INTEGRATED_EMISSION);
       // Resource packs control entity emission, with the requested blaze fallback.
 #if defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT
       if (!hasPackSpecular && integratedId >= 40000.0 && integratedId < 41000.0) pbrEmission=0.0;
@@ -407,7 +423,7 @@ void main() {
       #endif
 #if MATERIAL_MODE == 0
       // Integrated emission keeps its strength independent of labPBR controls.
-      if (!hasPackSpecular && (integratedId == 43001.0 || integratedId == 43002.0 || (integratedId >= 43120.0 && integratedId <= 43123.0))) {
+      if (!hasPackSpecular && (integratedId == 43001.0 || integratedId == 43002.0 || (integratedId >= 43201.0 && integratedId <= 43215.0) || (integratedId >= 43120.0 && integratedId <= 43123.0))) {
          // Dark saturated vein textures need a small HDR lift to reach bloom extraction.
          float veinPeak = max(pbrBase.r,max(pbrBase.g,pbrBase.b));
          vec3 veinHue = pbrBase/max(veinPeak,0.025);
@@ -418,6 +434,11 @@ void main() {
 #else
       lit += pbrBase * pbrEmission * LABPBR_EMISSION_STRENGTH;
 #endif
+      if (poweredDust) {
+         // Thin, vertex-tinted dust needs HDR radiance to show red bloom.
+         float dustPeak=max(pbrBase.r,max(pbrBase.g,pbrBase.b));
+         lit+=pbrBase/max(dustPeak,0.025)*pbrEmission*0.9;
+      }
       #if COLOR_GRADING == 1
          // Preserve HDR lighting until the final exposure/tone mapping pass.
          albedo.rgb = pow(max(lit, vec3(0.0)), vec3(1.0/2.2));

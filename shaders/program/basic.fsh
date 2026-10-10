@@ -35,7 +35,7 @@ void main() {
    gl_FragData[0]=glint;
 #if HAND_DYNAMIC_LIGHTING >= 0
    // A frame-cleared flag avoids intensity depending on glint pixel count.
-   if (renderStage == MC_RENDER_STAGE_HAND_SOLID || renderStage == MC_RENDER_STAGE_HAND_TRANSLUCENT)
+   if (renderStage == MC_RENDER_STAGE_HAND_SOLID || renderStage == MC_RENDER_STAGE_HAND_TRANSLUCENT || (renderStage == 0 && gl_FragCoord.z < 0.56))
       imageAtomicOr(enchantedHeldImage,ivec2(0),1u);
 #endif
 #else

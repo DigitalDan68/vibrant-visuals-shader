@@ -17,6 +17,8 @@ uniform sampler2D depthtex1;
 
 #if HAND_DYNAMIC_LIGHTING >= 0
 uniform usampler2D enchantedHeldSampler;
+uniform int heldItemId;
+uniform int heldItemId2;
 #endif
 varying vec2 texUV;
 
@@ -221,12 +223,21 @@ void main() {
    #endif
    vec3 entityIrradiance=resolveEntityLight(texUV);
 #if HAND_DYNAMIC_LIGHTING >= 0
-   if (texelFetch(enchantedHeldSampler,ivec2(0),0).r != 0u) {
+   bool enchantedHeld = texelFetch(enchantedHeldSampler,ivec2(0),0).r != 0u;
+   bool redstoneHeld = heldItemId == 42013 || heldItemId2 == 42013;
+   if (enchantedHeld || redstoneHeld) {
       float heldReceiverDepth=entityReceiverDepth(texUV);
       if (heldReceiverDepth > 0.56 && heldReceiverDepth < 1.0) {
          vec3 heldReceiver=screen2view(texUV,heldReceiverDepth);
          float enchantedFalloff=max(0.0,1.0-length(heldReceiver)/6.0);
-         entityIrradiance+=vec3(0.10,0.035,0.18)*enchantedFalloff*enchantedFalloff;
+         if (enchantedHeld)
+            entityIrradiance+=vec3(0.10,0.035,0.18)*enchantedFalloff*enchantedFalloff;
+         // Redstone blocks have shader emission but no native light level.
+         // Item IDs cover either hand without depending on visible glow pixels.
+         if (redstoneHeld) {
+            float redstoneFalloff=max(0.0,1.0-length(heldReceiver)/8.0);
+            entityIrradiance+=vec3(0.4,0.006,0.002)*redstoneFalloff*redstoneFalloff;
+         }
       }
    }
 #endif

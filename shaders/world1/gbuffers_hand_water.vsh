@@ -1,4 +1,4 @@
-#version 120
+#version 430 compatibility
 
 #define THE_END
 #define GBUFFERS_HAND

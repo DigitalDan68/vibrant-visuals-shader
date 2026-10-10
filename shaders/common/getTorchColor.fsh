@@ -17,7 +17,8 @@ vec3 getTorchColor(float torchLight, vec3 ambient, vec3 feetPos, vec3 surfaceNor
    if (insideDetailedBlockLightGrid(feetPos)) {
    // Colored voxel lighting replaces native lighting only inside this field.
    float emissionBoost;
-   vec3 irradiance=sampleColoredBlockLight(feetPos,surfaceNormal,emissionBoost)*COLORED_LIGHT_STRENGTH;
+   vec3 shaderOnlyRadiance;
+   vec3 irradiance=sampleColoredBlockLight(feetPos,surfaceNormal,emissionBoost,shaderOnlyRadiance)*COLORED_LIGHT_STRENGTH;
    // Bound static voxel light to the native lightmap brightness curve.
    // Keep its RGB hue, while matching the brightness/falloff of native light.
    float nativeStrength=rescale(torchLight,TORCH_UV_SCALE.x,TORCH_UV_SCALE.y);
@@ -27,6 +28,8 @@ vec3 getTorchColor(float torchLight, vec3 ambient, vec3 feetPos, vec3 surfaceNor
    float peak=max(irradiance.r,max(irradiance.g,irradiance.b));
    float nativeLimit=pow(nativeBrightness,2.2)*COLORED_LIGHT_STRENGTH*emissionBoost;
    irradiance*=min(1.0,nativeLimit/max(peak,0.000001));
+   // Shader-only emitters have no native lightmap value to cap against.
+   irradiance+=shaderOnlyRadiance*COLORED_LIGHT_STRENGTH;
    #if HAND_DYNAMIC_LIGHTING >= 0
       // Held-item dynamic light remains separate from static world lighting.
       float heldStrength=rescale(float(heldBlockLightValue)-SQRT_2*length(feetPos),0.0,15.0);

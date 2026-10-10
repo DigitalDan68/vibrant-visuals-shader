@@ -1,4 +1,4 @@
-#version 120
+#version 430 compatibility
 
 #define THE_NETHER
 #define GBUFFERS_HAND

@@ -1,4 +1,6 @@
 uint voxelPalette(uint id) {
+ if (id>=43201u && id<=43215u) return 10u+(id-43201u)/3u;
+ if (id==42013u) return 9u;
  if (id==42015u) return 8u;
  if (id==10076u || id==10528u || id==10656u || id==42001u) return 1u;
  if (id==10604u || id==42007u || id==42013u) return 2u;
@@ -10,6 +12,8 @@ uint voxelPalette(uint id) {
  return 0u;
 }
 vec3 voxelPaletteColor(uint palette) {
+ if (palette>=10u && palette<=14u) return vec3(1.0,0.015,0.005)*0.05*float(palette-9u);
+ if (palette==9u) return vec3(0.4,0.006,0.002);
  if (palette==8u) return vec3(1.0,0.5,0.12)*3.0;
  if (palette==1u) return vec3(0.12,0.65,1.0)*1.5;
  if (palette==2u) return vec3(1.0,0.025,0.01)*1.2;
