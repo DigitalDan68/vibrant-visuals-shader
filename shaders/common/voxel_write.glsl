@@ -14,7 +14,7 @@ void writeBlockVoxel() {
  // before packing so every vertex of the same source writes the same record.
  centre=floor(centre+cameraPosition+vec3(0.001))+vec3(0.5)-cameraPosition;
  uint id=uint(max(mc_Entity.x,0.0));
- bool emitter=(id>=43201u && id<=43215u) || at_midBlock.w>0.0 || id==10068u || id==10072u || id==10076u || (id>=10496u && id<=10984u) || (id>=42001u && id<=42014u) || (id>=43111u && id<=43113u) || (id>=30020u && id<=30022u);
+ bool emitter=id==43301u || id==43302u || (id>=43201u && id<=43215u) || at_midBlock.w>0.0 || id==10068u || id==10072u || id==10076u || (id>=10496u && id<=10984u) || (id>=42001u && id<=42014u) || (id>=43111u && id<=43113u) || (id>=30020u && id<=30022u);
  bool transparent=id==10008u || id==30030u || id==10031u || (id==10059u || id==42015u);
  vec3 vertexWorld=(shadowModelViewInverse*gl_ModelViewMatrix*gl_Vertex).xyz+cameraPosition;
  vec3 corner=fract(vertexWorld);

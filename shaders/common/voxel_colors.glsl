@@ -1,4 +1,5 @@
 uint voxelPalette(uint id) {
+ if (id==43301u || id==43302u) return 14u;
  if (id>=43201u && id<=43215u) return 10u+(id-43201u)/3u;
  if (id==42013u) return 9u;
  if (id==42015u) return 8u;

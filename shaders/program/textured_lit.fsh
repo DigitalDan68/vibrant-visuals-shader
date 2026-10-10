@@ -265,6 +265,13 @@ void main() {
       bool poweredDust = integratedId >= 43201.0 && integratedId <= 43215.0;
       if (poweredDust)
          pbrEmission=max(pbrEmission,1.5*(integratedId-43200.0)/15.0*INTEGRATED_EMISSION);
+      float circuitGlow=0.0;
+      if (integratedId >= 43301.0 && integratedId <= 43303.0) {
+         // Lit red torch tips and traces, excluding gray stone and brown stems.
+         circuitGlow=smoothstep(0.4,0.7,albedo.r)
+                    *smoothstep(0.12,0.3,albedo.r-max(albedo.g,albedo.b));
+         pbrEmission=max(pbrEmission,1.5*circuitGlow*INTEGRATED_EMISSION);
+      }
       // Resource packs control entity emission, with the requested blaze fallback.
 #if defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT
       if (!hasPackSpecular && integratedId >= 40000.0 && integratedId < 41000.0) pbrEmission=0.0;
@@ -434,7 +441,7 @@ void main() {
 #else
       lit += pbrBase * pbrEmission * LABPBR_EMISSION_STRENGTH;
 #endif
-      if (poweredDust) {
+      if (poweredDust || circuitGlow>0.001) {
          // Thin, vertex-tinted dust needs HDR radiance to show red bloom.
          float dustPeak=max(pbrBase.r,max(pbrBase.g,pbrBase.b));
          lit+=pbrBase/max(dustPeak,0.025)*pbrEmission*0.9;
