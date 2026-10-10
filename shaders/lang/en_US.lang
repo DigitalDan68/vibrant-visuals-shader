@@ -1,0 +1,268 @@
+#shaders/lang/en_us.lang
+
+profile.LOWEST=Lowest
+profile.LOW=Low
+profile.NORMAL=Normal
+profile.HIGH=High
+
+screen.WATER_SCREEN=Water
+option.WATER_BRIGHTNESS=Water brightness
+option.WATER_B=Water blueness
+option.WATER_A=Water opacity
+option.WATER_MIN_GLINT=Water glint strength §e[?]
+option.WATER_MIN_GLINT.comment=Determines how much texture the water retains; moving water still keeps all texture
+option.WATER_GLINT_BRIGHTNESS=Water glint brightness
+option.WATER_GLINT_CUTOFF=Water glint cutoff
+option.WATER_WAVE_SIZE=Wave size
+option.WATER_WAVE_SPEED=Wave speed
+
+screen.COLORS_SCREEN=Colors
+option.TORCH_INNER_R=Inner torch §cR
+option.TORCH_INNER_G=Inner torch §2G
+option.TORCH_INNER_B=Inner torch §9B
+option.TORCH_MIDDLE_R=Middle torch §cR
+option.TORCH_MIDDLE_G=Middle torch §2G
+option.TORCH_MIDDLE_B=Middle torch §9B
+option.TORCH_OUTER_R=Outer torch §cR
+option.TORCH_OUTER_G=Outer torch §2G
+option.TORCH_OUTER_B=Outer torch §9B
+option.MOON_R=Moon §cR
+option.MOON_G=Moon §2G
+option.MOON_B=Moon §9B
+
+screen.ATMOSPHERE_SCREEN=Atmosphere
+option.ENABLE_FOG=Enable fog
+option.WEATHER_OPACITY=Weather Opacity
+option.ENABLE_SKY=Enable sky §e[?]
+option.ENABLE_SKY.comment=Disable this option if you are using a sky resource pack
+option.OVERWORLD_FOG_MAX_SLIDER=Overworld transition fog §e[?]
+option.OVERWORLD_FOG_MAX_SLIDER.comment=Fog intensity during sunsets and sunrises
+option.OVERWORLD_FOG_MIN_SLIDER=Overworld fog
+option.END_STARS_SPEED=End stars speed
+option.END_STARS_AMOUNT=End stars amount
+option.END_STARS_OPACITY=End stars opacity
+
+screen.SHADOWS_SCREEN=Shadows
+option.SHADOW_BLUENESS=Shadow blueness
+option.shadowDistance=Shadow distance
+option.shadowMapResolution=Shadow resolution
+option.shadowIntervalSize=Shadow refocus rate §e[?]
+option.shadowIntervalSize.comment=Determines after how many blocks shadows refocus on the player
+option.entityShadowDistanceMul=Entity shadow distance §e[?]
+option.entityShadowDistanceMul.comment=As a percentage of shadow distance
+option.SHADOW_PIXEL=Shadow pixelization
+option.LIGHT_BRIGHTNESS=Sun brightness
+option.sunPathRotation=Sun path angle §e[!]
+option.sunPathRotation.comment=Miniature was designed with straight shadows in mind and may produce artifacts if changed
+option.SHADOW_DARKNESS=Shadow darkness
+option.FLAT_LIGHTING=Use flat lighting §e[?]
+option.FLAT_LIGHTING.comment=Without flat lighting, blocks will have shadows that do not match the sun's position, like in vanilla
+option.ENABLE_SHADOWS=Enable shadows
+option.SHADOW_ENTITY=Entity shadows
+value.SHADOW_ENTITY.-1=§aOff
+value.SHADOW_ENTITY.0=§ePlayer
+value.SHADOW_ENTITY.1=§eAll
+
+screen.REFLECTIONS_SCREEN=Reflections
+option.REFLECTIONS=Reflection opacity
+option.BLOCK_REFLECTIONS=Block reflection opacity §e[?]
+option.BLOCK_REFLECTIONS.comment=Adds reflections to blocks such as stone bricks, quartz, etc.
+option.SSR_MAX_STEPS=Maximum steps
+option.SSR_BINARY_STEPS=Maximum refining steps
+option.SSR_STEP_SIZE=Step size
+
+screen.OTHER_SCREEN=Other
+option.HIGHLIGHT_WAXED=Highlight waxed blocks §e[?]
+option.HIGHLIGHT_WAXED.comment=Holding a honeycomb highlights waxed blocks
+option.GLOWING_ORES=Glowing ores
+option.NETHER_COLOR_GRADING=Nether color grading
+option.HAND_DYNAMIC_LIGHTING=Hand dynamic lighting
+value.HAND_DYNAMIC_LIGHTING.-1=§aOff
+value.HAND_DYNAMIC_LIGHTING.0=§eWith light
+value.HAND_DYNAMIC_LIGHTING.1=§eAlways
+option.LABPBR=labPBR 1.3 resource pack materials
+option.LABPBR.comment=Enable terrain normal maps, smoothness, reflectance, metals, material AO and emission. Requires a labPBR 1.3 resource pack.
+
+screen.MATERIALS_SCREEN=Materials
+screen.GRADING_SCREEN=Color Grading
+option.COLOR_GRADING=Color Grading
+value.COLOR_GRADING.0=Normal
+value.COLOR_GRADING.1=Vibrant Visuals
+option.LABPBR_NORMAL_STRENGTH=Normal Map Strength
+option.LABPBR_NORMAL_STRENGTH.comment=Controls surface relief from normal maps. Zero uses geometric normals.
+option.LABPBR_ROUGHNESS_SCALE=Roughness Scale
+option.LABPBR_ROUGHNESS_SCALE.comment=Higher values soften material highlights and reduce sharp reflections. One follows the resource pack.
+option.LABPBR_SPECULAR_STRENGTH=Specular Strength
+option.LABPBR_SPECULAR_STRENGTH.comment=Controls highlights and material reflections. Zero disables specular lighting.
+option.LABPBR_AO_STRENGTH=Material Occlusion Strength
+option.LABPBR_AO_STRENGTH.comment=Controls occlusion from the normal map blue channel. Zero disables material AO.
+option.LABPBR_EMISSION_STRENGTH=Emission Brightness
+option.LABPBR_EMISSION_STRENGTH.comment=Controls emissive texture brightness. Zero disables texture emission. Emissive surfaces do not cast light onto nearby blocks.
+
+option.LABPBR_BLOCK_LIGHTING=Enhanced Material Block Lighting
+option.LABPBR_BLOCK_LIGHTING.comment=Enhances material response to block and held light in both modes. Enabled by High; lightmap-based, without directional block-light shadows.
+
+option.EXPOSURE=Exposure
+
+option.AUTO_EXPOSURE=Adaptive Exposure
+
+option.BLOOM_STRENGTH=Bloom Strength
+
+option.BLOOM_RADIUS=Bloom Radius
+
+option.HEIGHT_FOG=Height Fog
+
+option.FOG_HEIGHT=Fog Base Height
+
+option.FOG_DENSITY=Fog Density
+
+option.VOLUMETRIC_SAMPLES=Volumetric Quality
+
+option.VOLUMETRIC_STRENGTH=Sun Ray Strength
+
+option.SSAO_SAMPLES=Contact Occlusion Quality
+
+option.SSAO_STRENGTH=Contact Occlusion Strength
+
+option.SKY_REFLECTIONS=Sky Reflections
+
+option.WATER_ABSORPTION=Water Absorption
+
+option.WATER_CAUSTICS=Caustics Strength
+
+option.AUTO_EXPOSURE.comment=Meters scene brightness and gradually adapts using a persistent exposure history. Applies in Vibrant Visuals.
+option.VOLUMETRIC_SAMPLES.comment=Shadow-tested atmospheric light samples. Zero disables rays. Overworld only, within shadow distance.
+option.SKY_REFLECTIONS.comment=Sky reflection fallback for smooth materials when screen-space reflections miss.
+option.WATER_CAUSTICS.comment=Brighter world-pixel-aligned light patterns on submerged surfaces, visible above and below water. Applies in Vibrant Visuals.
+
+option.COLOR_GRADING.comment=Normal keeps the Miniature palette. Vibrant Visuals enables HDR exposure, atmosphere, bloom, contact occlusion, sky reflections and improved water. Quality controls effect cost.
+option.FOG_HEIGHT.comment=World height around which atmospheric fog is densest. Higher terrain receives less fog. Vibrant Visuals only.
+option.FOG_DENSITY.comment=Atmospheric fog density multiplier. Environmental fog keeps separate controls.
+option.EXPOSURE.comment=Brightness multiplier before highlight compression. Vibrant Visuals only.
+option.SSAO_SAMPLES.comment=Depth-based contact occlusion samples. Zero disables the effect. Vibrant Visuals only.
+option.BLOOM_STRENGTH.comment=Screen-space glow around bright lighting and emissive surfaces. Zero disables bloom. Vibrant Visuals only.
+option.WATER_ABSORPTION.comment=Strength of depth-dependent water color attenuation and opacity. Vibrant Visuals only.
+
+option.CAUSTICS_PIXELS=Caustics Pixels per Block
+option.CAUSTICS_PIXELS.comment=Locks the caustic pattern to a world-space pixel grid. Use 16 for vanilla pixel density.
+
+option.EXPOSURE_MIN=Minimum Adaptive Exposure
+option.EXPOSURE_MAX=Maximum Adaptive Exposure
+option.EXPOSURE_SPEED=Exposure Adaptation Speed
+
+option.NETHER_FOG_DISTANCE=Nether Fog Distance
+option.NETHER_FOG_DISTANCE.comment=Controls Nether atmospheric haze independently of Minecraft and DH render distance. Lower values give denser fog.
+option.NETHER_AMBIENCE=Nether Ambient Fill
+option.NETHER_AMBIENCE.comment=Restores diffuse ambient light tinted by the current Nether biome fog color. Zero disables the extra fill.
+
+option.END_FOG_DISTANCE=End Fog Distance
+option.END_FOG_DISTANCE.comment=Controls purple End atmosphere independently of normal and DH view distance. Lower values give denser haze.
+option.END_AMBIENCE=End Ambient Fill
+option.END_AMBIENCE.comment=Adjusts purple diffuse ambient lighting in the End.
+option.END_SKY_GLOW=End Sky Glow
+option.END_SKY_GLOW.comment=Strength of the subtle purple End sky backdrop. Star amount, opacity and animation use the End Stars controls.
+
+option.DIMENSION_VOLUMETRICS=Dimension Volumetric Fog
+option.DIMENSION_VOLUMETRICS.comment=Ray-marched moving density fog, stopped by Minecraft and DH scene depth. Vibrant Visuals only. Quality zero uses simple fog.
+option.DIMENSION_FOG_STRENGTH=Dimension Volumetric Density
+option.DIMENSION_FOG_STRENGTH.comment=Density multiplier for End and Sift volumetric fog. Their Fog Distance controls also apply. Zero restores simple dimension fog.
+
+screen.SIFT_SCREEN=The Sift Atmosphere
+option.SIFT_AMBIENCE=Sift Ambient Fill
+option.SIFT_FOG_DISTANCE=Sift Fog Distance
+option.SIFT_MIST_HEIGHT=Sift Mist Height
+option.SIFT_SKY_GLOW=Sift Sky Glow
+option.SIFT_GLOW=Sift Bloom Multiplier
+option.SIFT_FOG_DISTANCE.comment=Distance scale for cyan/violet haze in Mielon's Sift. Volumetric quality and dimension volumetric toggle apply.
+
+option.WATER_VOLUMETRICS=Volumetric Water Fog
+option.WATER_VOLUMETRICS.comment=Depth-limited absorption and moving ambient scattering. Normal/High ray march; Low/Lowest use a cheaper uniform fog.
+option.WATER_FOG_DENSITY=Water Fog Density
+option.WATER_SCATTERING=Water Ambient Scattering
+
+option.CLOUD_SHADOWS=Cloud Shadows
+option.CLOUD_SHADOWS.comment=Projects the active cloud texture along the sunlight direction onto nearby and DH terrain. Requires Shadows. Drift is approximated; disable when clouds are hidden.
+option.CLOUD_SHADOW_STRENGTH=Cloud Shadow Strength
+option.CLOUD_SHADOW_HEIGHT=Cloud Shadow Height
+
+option.SIFT_LIGHT_SHAFTS=Sift Light Shafts
+option.SIFT_LIGHT_SHAFTS.comment=Warm world-space ambient shafts with nearby shadow-map occlusion. Normal/High and Vibrant Visuals only. Zero disables.
+option.SIFT_MOTES=Sift Luminous Motes
+option.SIFT_MOTES.comment=Depth-limited shader motes. Normal/High and Vibrant Visuals only. Zero disables.
+
+
+option.LABPBR_METAL_FACTOR=Metal Factor
+option.LABPBR_METAL_FACTOR.comment=Scales metallic response from the selected material mode. Zero treats metals as dielectrics.
+
+option.END_FLASH_SKY=End Flash Sky Rift
+option.END_FLASH_SKY.comment=Purple-white rift and sky glow synchronized to Minecraft's End flash. Visible in the native flash direction and masked by terrain, including DH. Requires Sky enabled.
+option.END_FLASH_STRENGTH=End Flash Sky Strength
+
+option.SUN_BLOOM_STRENGTH=Sun Bloom Strength
+option.SUN_BLOOM_STRENGTH.comment=Sun-only HDR brightness feeding scene bloom. Vibrant Visuals only; Bloom Strength must be above zero. Zero restores the native sun brightness.
+
+option.MATERIAL_MODE=Material Mode
+value.MATERIAL_MODE.0=Integrated PBR
+value.MATERIAL_MODE.1=labPBR 1.3
+option.MATERIAL_MODE.comment=Integrated uses built-in block rules and your color textures. labPBR reads normal and specular textures from a compatible resource pack. Quality profiles preserve this selection.
+option.INTEGRATED_EMISSION=Integrated Emission
+option.INTEGRATED_METALS=Integrated Metallic Finish
+option.CAUSTICS_SCALE=Caustics Scale
+option.CAUSTICS_SPEED=Caustics Animation Speed
+option.CAUSTICS_POWER=Caustics Edge Contrast
+screen.LABPBR_SCREEN=labPBR Texture Controls
+screen.LIGHTING_SCREEN=Lighting & Reflections
+screen.CAUSTICS_SCREEN=Water Caustics
+screen.WATER_FOG_SCREEN=Underwater Fog
+screen.DIMENSIONS_SCREEN=Dimension Effects
+screen.NETHER_SCREEN=Nether
+screen.END_SCREEN=The End
+screen.PERFORMANCE_SCREEN=Quality & Performance
+
+option.PORTAL_EMISSION=Portal Emission
+option.PORTAL_EMISSION.comment=HDR emission for mapped portals. Custom portal renderers must expose their block identity to Iris.
+
+option.SUNSET_BLOOM_BOOST=Sunset Bloom Boost
+option.SUNSET_BLOOM_BOOST.comment=Maximum bloom multiplier near dusk in the Overworld. Fades smoothly with solar elevation and rain; daytime and deep night keep normal bloom strength.
+
+option.GLASS_REFLECTION_STRENGTH=Glass Reflections
+option.GLASS_REFLECTION_STRENGTH.comment=Reflection strength for clear and stained glass blocks/panes. Preserves texture alpha; Fresnel keeps face-on views transparent.
+
+profile.ULTRA=Ultra
+option.COLORED_BLOCK_LIGHTING=Colored Block Lighting
+option.COLORED_BLOCK_LIGHTING.comment=Replaces vanilla block illumination with voxel source color and brightness. Enabled by Ultra. Sunlight and ambient lighting remain independent.
+option.COLORED_LIGHT_STRENGTH=Colored Light Strength
+option.COLORED_LIGHT_STRENGTH.comment=Scales voxel block illumination. Zero removes static block lighting while this feature is enabled.
+
+option.COLORED_GLASS_SHADOWS=Colored Glass Shadows
+option.WATER_SCENE_REFLECTIONS=Water Scene Reflections
+option.WATER_SCENE_REFLECTIONS.comment=Screen-space scene reflections can change with the view. Off uses stable sky reflections in Vibrant mode.
+option.WATER_SUN_GLINT=Water Sun Glint
+
+option.WATER_TEXTURE_OVERLAY=Textured Water Highlights
+option.WATER_TEXTURE_OVERLAY.comment=Mask sun and moon reflections with animated water texture pixels. No separate texture overlay. DH retains a smooth reflection.
+
+option.WATER_MOON_GLINT=Water Moon Glint
+option.WATER_MOON_GLINT.comment=Weaker lunar reflection, attenuated by moon elevation, phase, rain and shadows.
+
+option.CAVE_AMBIENT=Cave Ambient Brightness
+option.CAVE_AMBIENT.comment=Minimum ambient fill in low-skylight Overworld areas.
+
+option.TWILIGHT_RAYS=Sunrise / Sunset Rays
+option.TWILIGHT_RAYS.comment=Warm shadow-shaped sun shafts near the horizon. Requires Vibrant grading, fog, shadows, and volumetric samples.
+option.TWILIGHT_RAY_STRENGTH=Twilight Ray Strength
+
+
+option.BLOCK_LIGHT_HORIZONTAL_RADIUS=Block Light Horizontal Radius
+option.BLOCK_LIGHT_VERTICAL_RADIUS=Block Light Vertical Radius
+option.BLOCK_LIGHT_HORIZONTAL_RADIUS.comment=Detailed voxel grid radius in blocks along X and Z. Higher values increase GPU cost and memory. Blends to distant grids inside the boundary.
+option.BLOCK_LIGHT_VERTICAL_RADIUS.comment=Detailed voxel grid radius in blocks above and below the player. Higher values increase GPU cost and memory.
+
+screen.PACK_COMPATIBILITY_SCREEN=Texture Pack Compatibility
+option.PACK_OUTLINE_MARKERS=Enchantment Outline Alpha Markers
+option.PACK_OUTLINE_MARKERS.comment=Support unlit item texels with alpha 200, 252 or 253, used by Enchantment Outlines. Disable if an unrelated texture uses those opacity values.
+option.PACK_FULLBRIGHT_ENTITIES=Fullbright Entity Overlays
+option.PACK_FULLBRIGHT_ENTITIES.comment=Honor fullbright entity draws used by ETF emissive overlays. Disable if a mod draws ordinary entity layers with fullbright lighting.
+
+option.ENTITY_DYNAMIC_LIGHTING=Entity Emission Lighting
+option.ENTITY_DYNAMIC_LIGHTING.comment=Lets emissive mobs light nearby blocks. Enabled by default on Ultra. Turning this off keeps their texture glow but removes their cast light.
