@@ -45,7 +45,7 @@ float entityLightVisibility(vec3 receiver,vec3 source) {
 }
 void main() {
  vec4 result=vec4(0.0);
-#ifdef ENTITY_DYNAMIC_LIGHTING
+#if defined ENTITY_DYNAMIC_LIGHTING && !defined LAMB_DYNAMIC_LIGHTS
  float depth=entityReceiverDepth(texUV);
  if(depth>0.56 && depth<1.0 && texture2D(colortex1,texUV).a>=-1.0) {
   vec3 receiver=screen2view(texUV,depth);

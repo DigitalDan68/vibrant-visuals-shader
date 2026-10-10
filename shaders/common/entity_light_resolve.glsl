@@ -2,7 +2,7 @@ uniform sampler2D colortex9;
 #include "/common/entity_light_depth.glsl"
 #include "/common/entity_shadow_grid.glsl"
 vec3 resolveEntityLight(vec2 uv) {
-#ifdef ENTITY_DYNAMIC_LIGHTING
+#if defined ENTITY_DYNAMIC_LIGHTING && !defined LAMB_DYNAMIC_LIGHTS
  float depth=entityReceiverDepth(uv);
  if(depth<=0.56 || depth>=1.0 || texture2D(colortex1,uv).a < -1.0) return vec3(0.0);
  vec3 receiver=screen2view(uv,depth);

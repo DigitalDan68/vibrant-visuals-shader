@@ -24,7 +24,7 @@ void main() {
    /* DRAWBUFFERS:067528 */
    gl_FragData[0] = beam;
    gl_FragData[5] = vec4(0.0);
-#ifdef ENTITY_DYNAMIC_LIGHTING
+#if defined ENTITY_DYNAMIC_LIGHTING && !defined LAMB_DYNAMIC_LIGHTS
    if (renderStage==MC_RENDER_STAGE_ENTITIES && beam.a>0.05)
       gl_FragData[5]=vec4(pow(max(beam.rgb,vec3(0.0)),vec3(2.2)),1.0);
 #endif

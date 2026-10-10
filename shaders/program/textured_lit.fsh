@@ -9,7 +9,7 @@ uniform int entityId;
 uniform ivec2 eyeBrightnessSmooth;
 uniform sampler2D gtexture;
 uniform sampler2D lightmap;
-#if defined GBUFFERS_HAND && HAND_DYNAMIC_LIGHTING >= 0
+#if defined GBUFFERS_HAND && HAND_DYNAMIC_LIGHTING >= 0 && !defined LAMB_DYNAMIC_LIGHTS
 layout(r32ui) uniform uimage2D enchantedHeldImage;
 #endif
 #if (defined GBUFFERS_TERRAIN || defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT || defined GBUFFERS_HAND) && !defined MOD_COLORWHEEL
@@ -64,9 +64,9 @@ varying vec3 gradientFogColor;
    flat varying float isOre;
 #endif
 
-#if HAND_DYNAMIC_LIGHTING == 0
+#if HAND_DYNAMIC_LIGHTING == 0 && !defined LAMB_DYNAMIC_LIGHTS
    uniform int heldBlockLightValue;
-#elif HAND_DYNAMIC_LIGHTING == 1
+#elif HAND_DYNAMIC_LIGHTING == 1 && !defined LAMB_DYNAMIC_LIGHTS
    #define heldBlockLightValue 14
 #endif
 
@@ -114,7 +114,7 @@ void main() {
    outlineUnlit = outlineItem && (outlineAlpha == 200.0 || outlineAlpha == 252.0 || outlineAlpha == 253.0);
    outlineUntinted = outlineAlpha == 200.0;
 #endif
-#if defined GBUFFERS_HAND && HAND_DYNAMIC_LIGHTING >= 0
+#if defined GBUFFERS_HAND && HAND_DYNAMIC_LIGHTING >= 0 && !defined LAMB_DYNAMIC_LIGHTS
    // Outline packs replace vanilla glint with marked item texture pixels.
    // Only held-item programs register these markers, never mobs or drops.
    if (outlineUnlit && outlineTexture.a*outlineVertexColor.a > 0.01)
@@ -477,7 +477,7 @@ void main() {
    /* DRAWBUFFERS:0675218 */
    gl_FragData[0] = albedo;
    gl_FragData[6] = vec4(0.0);
-#if defined ENTITY_DYNAMIC_LIGHTING && defined TERRAIN_LABPBR && (defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT)
+#if defined ENTITY_DYNAMIC_LIGHTING && defined TERRAIN_LABPBR && (defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT) && !defined LAMB_DYNAMIC_LIGHTS
    if(resourceEntityFullbright && albedo.a>0.01)
       gl_FragData[6]=vec4(resourceEntityEmission,1.0);
    else if ((hasPackSpecular || (MATERIAL_MODE == 0 && integratedId == 40002.0)) && pbrEmission>0.001 && albedo.a>0.1)

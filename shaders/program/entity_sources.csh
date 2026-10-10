@@ -11,7 +11,7 @@ shared vec4 sourcePosition[64];
 void main() {
  uint lane=gl_LocalInvocationIndex;
  vec4 bestColor=vec4(0.0),bestPosition=vec4(0.0);
-#ifdef ENTITY_DYNAMIC_LIGHTING
+#if defined ENTITY_DYNAMIC_LIGHTING && !defined LAMB_DYNAMIC_LIGHTS
  ivec2 size=textureSize(colortex8,0);
  ivec2 tile=ivec2(gl_WorkGroupID.xy);
  ivec2 begin=tile*size/ivec2(16,9),end=(tile+1)*size/ivec2(16,9);
@@ -43,7 +43,7 @@ void main() {
   float weight=sourceColor[0].a;
   vec3 emission=sourceColor[0].rgb/max(weight,0.001);
   // Keep the pre-rasterization source when its glowing face is hidden.
-#ifdef ENTITY_DYNAMIC_LIGHTING
+#if defined ENTITY_DYNAMIC_LIGHTING && !defined LAMB_DYNAMIC_LIGHTS
   if(weight<=0.001 && imageLoad(entitySourcePosition,ivec2(gl_WorkGroupID.xy)).w>0.5) return;
 #endif
   imageStore(entitySourcePosition,ivec2(gl_WorkGroupID.xy),vec4(sourcePosition[0].xyz/max(weight,0.001),weight>0.001 ? 1.0 : 0.0));

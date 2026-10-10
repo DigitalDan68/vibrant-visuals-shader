@@ -1,0 +1,8 @@
+{
+  "match": {
+    "items": [
+      "minecraft:glow_lichen"
+    ]
+  },
+  "luminance": 8
+}

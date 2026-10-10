@@ -25,9 +25,9 @@ varying vec3 blockLightNormal;
 varying vec4 ambient;
 varying vec4 color;
 
-#if HAND_DYNAMIC_LIGHTING == 0
+#if HAND_DYNAMIC_LIGHTING == 0 && !defined LAMB_DYNAMIC_LIGHTS
    uniform int heldBlockLightValue;
-#elif HAND_DYNAMIC_LIGHTING == 1
+#elif HAND_DYNAMIC_LIGHTING == 1 && !defined LAMB_DYNAMIC_LIGHTS
    #define heldBlockLightValue 14
 #endif
 

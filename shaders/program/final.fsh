@@ -15,7 +15,7 @@ uniform sampler2D colortex5;
 uniform sampler2D depthtex0;
 uniform sampler2D depthtex1;
 
-#if HAND_DYNAMIC_LIGHTING >= 0
+#if HAND_DYNAMIC_LIGHTING >= 0 && !defined LAMB_DYNAMIC_LIGHTS
 uniform usampler2D enchantedHeldSampler;
 uniform int heldItemId;
 uniform int heldItemId2;
@@ -222,7 +222,7 @@ void main() {
       #endif
    #endif
    vec3 entityIrradiance=resolveEntityLight(texUV);
-#if HAND_DYNAMIC_LIGHTING >= 0
+#if HAND_DYNAMIC_LIGHTING >= 0 && !defined LAMB_DYNAMIC_LIGHTS
    bool enchantedHeld = texelFetch(enchantedHeldSampler,ivec2(0),0).r != 0u;
    bool redstoneHeld = heldItemId == 42013 || heldItemId2 == 42013;
    if (enchantedHeld || redstoneHeld) {

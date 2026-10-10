@@ -1,0 +1,11 @@
+Vibrant Visuals Dynamic Lights — Minecraft 26.3 / LambDynamicLights 4
+
+Adds lighting rules without changing textures. Enable with the shader LambDynamicLights Compatibility setting. Rules also affect held, dropped, framed and displayed items via the mod's existing providers. Enchantments and stored enchantments: 8; redstone block: 8; redstone dust: 5; unstripped Nether stems/hyphae: 6; glow lichen: 8. Stripped wood stays unlit.
+
+Entity rules are modest, species-wide approximations for the installed Fresh Animations emissive pack and vanilla glowing eyes. They persist when the glowing face is not visible. This pack does not inspect texture alpha, ETF overlays, randomized skins or LabPBR emission maps. Removing the emissive texture pack does NOT automatically remove these entity rules; disable this companion pack or remove its entity rules if those textures are no longer used.
+
+Already covered by LambDynamicLights: native luminous block items (lanterns, copper lantern variants, sea lanterns, glowstone, shroomlights, end rods, beacons, froglights, jack-o-lanterns, crying obsidian), torches including copper/soul/redstone, campfires, blaze rods/powder, glow berries/ink/dust, lava buckets, nether stars, prismarine crystals, spectral arrows; burning entities, equipped luminous items, blazes, allays, glow squids, magma cubes, fireballs, wither skulls, dropped items, item frames and displays.
+
+Limits: charged-only creepers, angry-only bee/wolf eyes and shooting-only ghast textures need a state-aware Java provider; the installed JSON entity predicates do not expose these states. No always-glowing creeper, bee, wolf or ghast rule is added. Arbitrary modded/ETF textures need rules from their authors or an API bridge. Placed powered redstone dust/repeaters/comparators and redstone blocks remain shader voxel lights; LambDynamicLights item/entity JSON cannot change placed-block light levels. Unlit copper bulb items, unpowered circuitry and stripped stems are not forced to emit. Colored moving lights are not supplied by this lightmap-based mod.
+
+Validated against the installed mod's JSON format and Minecraft 26.3 registries; older Minecraft versions require their own metadata/schema checks. In-game behavior and frame rate require testing.

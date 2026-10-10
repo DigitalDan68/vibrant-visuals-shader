@@ -73,32 +73,50 @@ uniform usampler3D blockVoxelSampler;
 #if FLOOD_PASS % 2 == 0
 uniform sampler3D blockLightA;
 layout(rgba32f) uniform writeonly image3D blockLightBImage;
+uniform sampler3D blockLightSecondA;
+layout(rgba32f) uniform writeonly image3D blockLightSecondBImage;
+#define SECOND_IN blockLightSecondA
+#define SECOND_OUT blockLightSecondBImage
 #define LIGHT_IN blockLightA
 #define LIGHT_OUT blockLightBImage
 #else
 uniform sampler3D blockLightB;
 layout(rgba32f) uniform writeonly image3D blockLightAImage;
+uniform sampler3D blockLightSecondB;
+layout(rgba32f) uniform writeonly image3D blockLightSecondAImage;
+#define SECOND_IN blockLightSecondB
+#define SECOND_OUT blockLightSecondAImage
 #define LIGHT_IN blockLightB
 #define LIGHT_OUT blockLightAImage
 #endif
 #include "/common/voxel_colors.glsl"
 uniform vec3 cameraPosition;
 #include "/common/voxel_grid.glsl"
-vec4 neighbor(ivec3 cell,int level) {
+vec4 neighbor(ivec3 cell,int level,int slot) {
  if (any(lessThan(cell,ivec3(0))) || any(greaterThanEqual(cell,blockVoxelExtent(level)))) return vec4(0.0);
  cell+=blockVoxelOffset(level);
- return texelFetch(LIGHT_IN,cell,0);
+ return slot==0 ? texelFetch(LIGHT_IN,cell,0) : texelFetch(SECOND_IN,cell,0);
 }
-void considerSource(vec4 candidate,vec3 receiver,inout vec4 source,inout float bestDistance) {
- if (candidate.w<0.5) return;
+bool sameSource(vec4 a,vec4 b) {
+ return a.w==b.w && all(lessThan(abs(a.xyz-b.xyz),vec3(0.0001)));
+}
+bool precedesSource(vec4 a,vec4 b,float da,float db) {
+ if (da<db-0.00001) return true;
+ if (abs(da-db)>=0.00001) return false;
+ return a.x<b.x || (a.x==b.x && (a.y<b.y || (a.y==b.y && (a.z<b.z || (a.z==b.z && a.w<b.w)))));
+}
+void considerSource(vec4 candidate,vec3 receiver,inout vec4 source,inout vec4 second,inout float firstDistance,inout float secondDistance) {
+ if (candidate.w<0.5 || sameSource(candidate,source) || sameSource(candidate,second)) return;
  vec3 delta=candidate.xyz-receiver;
  float distanceSquared=dot(delta,delta);
- // Keep a deterministic winner when sources are equally close; neighbor order
- // must not change the selected light as the camera-aligned grid moves.
- bool tied=abs(distanceSquared-bestDistance)<0.00001;
- bool precedes=candidate.x<source.x || (candidate.x==source.x && (candidate.y<source.y || (candidate.y==source.y && (candidate.z<source.z || (candidate.z==source.z && candidate.w<source.w)))));
- if (distanceSquared<bestDistance-0.00001 || (tied && precedes)) {source=candidate;bestDistance=distanceSquared;}
+ if (precedesSource(candidate,source,distanceSquared,firstDistance)) {
+  second=source;secondDistance=firstDistance;
+  source=candidate;firstDistance=distanceSquared;
+ } else if (precedesSource(candidate,second,distanceSquared,secondDistance)) {
+  second=candidate;secondDistance=distanceSquared;
+ }
 }
+
 #endif
 void main() {
 #ifdef COLORED_BLOCK_LIGHTING
@@ -109,21 +127,26 @@ void main() {
  if (any(greaterThanEqual(localCell,blockVoxelExtent(level)))) return;
  uint block=texelFetch(blockVoxelSampler,cell,0).r;
  vec4 source=vec4(0.0);
+ vec4 second=vec4(0.0);
  if (block>2u) source=unpackVoxelSource(block,localCell);
  if (block==0u || block==2u) {
   vec3 receiver=vec3(localCell)+0.5;
-  float bestDistance=1e20;
-  // Retain valid paths discovered in earlier passes instead of alternating
-  // between neighboring wavefronts. The volume is cleared before each frame.
-  considerSource(neighbor(localCell,level),receiver,source,bestDistance);
-  considerSource(neighbor(localCell+ivec3(1,0,0),level),receiver,source,bestDistance);
-  considerSource(neighbor(localCell-ivec3(1,0,0),level),receiver,source,bestDistance);
-  considerSource(neighbor(localCell+ivec3(0,1,0),level),receiver,source,bestDistance);
-  considerSource(neighbor(localCell-ivec3(0,1,0),level),receiver,source,bestDistance);
-  considerSource(neighbor(localCell+ivec3(0,0,1),level),receiver,source,bestDistance);
-  considerSource(neighbor(localCell-ivec3(0,0,1),level),receiver,source,bestDistance);
+  float firstDistance=1e20,secondDistance=1e20;
+  // Keep two distinct sources through propagation. Dedupe shared paths so
+  // the same lamp cannot brighten itself by arriving from multiple neighbors.
+  for (int direction=0;direction<7;++direction) {
+   ivec3 offset=ivec3(0);
+   if (direction>0) {
+    int axis=(direction-1)/2;
+    offset[axis]=direction%2==1 ? 1 : -1;
+   }
+   for (int slot=0;slot<2;++slot)
+    considerSource(neighbor(localCell+offset,level,slot),receiver,source,second,firstDistance,secondDistance);
+  }
  }
  if (source.w>0.5 && length((source.xyz-(vec3(localCell)+0.5))*blockVoxelScale(level))>(16.0+1.732051*blockVoxelScale(level))) source=vec4(0.0);
+ if (second.w>0.5 && length((second.xyz-(vec3(localCell)+0.5))*blockVoxelScale(level))>(16.0+1.732051*blockVoxelScale(level))) second=vec4(0.0);
  imageStore(LIGHT_OUT,cell,source);
+ imageStore(SECOND_OUT,cell,second);
 #endif
 }

@@ -1,5 +1,5 @@
 // Capture emission before rasterization/culling. Only Ultra enables this path.
-#ifdef ENTITY_DYNAMIC_LIGHTING
+#if defined ENTITY_DYNAMIC_LIGHTING && !defined LAMB_DYNAMIC_LIGHTS
 uniform sampler2D gtexture;
 #ifndef ENTITY_VERTEX_EYES
 uniform sampler2D specular;

@@ -266,3 +266,6 @@ option.PACK_FULLBRIGHT_ENTITIES.comment=Honor fullbright entity draws used by ET
 
 option.ENTITY_DYNAMIC_LIGHTING=Entity Emission Lighting
 option.ENTITY_DYNAMIC_LIGHTING.comment=Lets emissive mobs light nearby blocks. Enabled by default on Ultra. Turning this off keeps their texture glow but removes their cast light.
+
+option.LAMB_DYNAMIC_LIGHTS=LambDynamicLights Compatibility
+option.LAMB_DYNAMIC_LIGHTS.comment=Use the mod lightmap for dynamic lighting. Disables shader held-item and entity cast lights to prevent duplication. Keeps emissive textures and colored static block lights. Enable only when LambDynamicLights is installed.

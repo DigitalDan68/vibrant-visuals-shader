@@ -83,7 +83,7 @@ varying vec3 gradientFogColor;
 #endif
 void main() {
    gl_Position = ftransform();
-#if defined ENTITY_DYNAMIC_LIGHTING && (defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT)
+#if defined ENTITY_DYNAMIC_LIGHTING && (defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT) && !defined LAMB_DYNAMIC_LIGHTS
    if(currentRenderedItemId<=0 && blockEntityId<=0)
       captureEntityVertexLight((gl_ModelViewMatrix*gl_Vertex).xyz,(gl_TextureMatrix[1]*gl_MultiTexCoord1).xy,gl_Color);
 #endif

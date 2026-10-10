@@ -1,0 +1,11 @@
+{
+  "match": {
+    "items": [
+      "minecraft:crimson_stem",
+      "minecraft:crimson_hyphae",
+      "minecraft:warped_stem",
+      "minecraft:warped_hyphae"
+    ]
+  },
+  "luminance": 6
+}

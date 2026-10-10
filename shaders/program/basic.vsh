@@ -9,7 +9,7 @@ varying vec4 color;
 
 void main() {
    gl_Position = ftransform();
-#if defined ENTITY_VERTEX_EYES && defined ENTITY_DYNAMIC_LIGHTING
+#if defined ENTITY_VERTEX_EYES && defined ENTITY_DYNAMIC_LIGHTING && !defined LAMB_DYNAMIC_LIGHTS
    captureEntityVertexLight((gl_ModelViewMatrix*gl_Vertex).xyz,(gl_TextureMatrix[1]*gl_MultiTexCoord1).xy,gl_Color);
 #endif
 

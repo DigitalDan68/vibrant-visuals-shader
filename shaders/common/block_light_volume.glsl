@@ -1,6 +1,7 @@
 #ifndef MINIATURE_BLOCK_LIGHT_VOLUME
 #define MINIATURE_BLOCK_LIGHT_VOLUME
 uniform sampler3D blockLightA;
+uniform sampler3D blockLightSecondA;
 #include "/common/voxel_grid.glsl"
 #include "/common/voxel_colors.glsl"
 vec3 sampleBlockClipmap(vec3 position,vec3 normal,int level,out float emissionBoost,out vec3 shaderOnlyRadiance) {
@@ -17,7 +18,8 @@ vec3 sampleBlockClipmap(vec3 position,vec3 normal,int level,out float emissionBo
  for (int z=0;z<2;++z) for (int y=0;y<2;++y) for (int x=0;x<2;++x) {
   ivec3 cell=base+ivec3(x,y,z);
   if (any(lessThan(cell,ivec3(0))) || any(greaterThanEqual(cell,blockVoxelExtent(level)))) continue;
-  vec4 source=texelFetch(blockLightA,cell+blockVoxelOffset(level),0);
+  for (int slot=0;slot<2;++slot) {
+  vec4 source=slot==0 ? texelFetch(blockLightA,cell+blockVoxelOffset(level),0) : texelFetch(blockLightSecondA,cell+blockVoxelOffset(level),0);
   if (source.w<0.5) continue;
   float distanceToSource=length((receiver-source.xyz)*blockVoxelScale(level));
   if (distanceToSource>=16.0) continue;
@@ -33,6 +35,7 @@ vec3 sampleBlockClipmap(vec3 position,vec3 normal,int level,out float emissionBo
   sourceWeight+=contribution;
   boostedWeight+=contribution*(source.w==9.0 ? 2.0 : 1.0);
   radiance+=voxelPaletteColor(uint(source.w-1.0))*falloff*weight.x*weight.y*weight.z;
+  }
  }
  emissionBoost=sourceWeight>0.000001 ? boostedWeight/sourceWeight : 1.0;
  return radiance;
