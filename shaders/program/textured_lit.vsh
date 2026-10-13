@@ -170,6 +170,3 @@ void main() {
       lightColor = getLightColor(sunHeight, skyLight);
    #endif
 }
-
-
-

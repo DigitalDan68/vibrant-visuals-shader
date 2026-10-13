@@ -236,8 +236,6 @@ float siftNightWeight(float time) {
 }
 #endif
 
-
-
 #define BIOME_ATMOSPHERE
 #define BIOME_ATMOSPHERE_STRENGTH 0.65 //[0.0 0.25 0.5 0.65 0.75 1.0]
 

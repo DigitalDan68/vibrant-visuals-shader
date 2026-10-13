@@ -1,0 +1,15 @@
+{
+  "match": {
+    "predicates": {
+      "minecraft:enchantments": [
+        {
+          "levels": {
+            "min": 1
+          }
+        }
+      ]
+    }
+  },
+  "luminance": 8,
+  "water_sensitive": false
+}

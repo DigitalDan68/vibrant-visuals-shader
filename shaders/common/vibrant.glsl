@@ -15,9 +15,7 @@ uniform float thunderStrength;
 #if defined OVERWORLD || defined THE_SIFT
 uniform int worldTime;
 #endif
-#if defined THE_NETHER || defined THE_END || defined THE_SIFT
 uniform float blindness, darknessFactor;
-#endif
 #if defined ENABLE_SHADOWS && (defined OVERWORLD || defined THE_SIFT)
 uniform mat4 shadowModelView, shadowProjection;
 uniform sampler2D shadowtex1;

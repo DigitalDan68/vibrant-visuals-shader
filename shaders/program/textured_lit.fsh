@@ -226,6 +226,8 @@ void main() {
       // Cyan separation keeps the brown logs and neutral ash non-emissive.
       if (integratedId == 10656.0)
          emit = max(warmPixel,smoothstep(0.03,0.12,min(albedo.g,albedo.b)-albedo.r)*smoothstep(0.12,0.35,bright));
+      if (integratedId == 42016.0)
+         emit=1.2*smoothstep(0.03,0.12,min(albedo.g,albedo.b)-albedo.r)*smoothstep(0.10,0.30,bright);
       if (integratedId == 42015.0) {
          float yellowLichen = smoothstep(0.025,0.09,min(albedo.r,albedo.g)-albedo.b);
          emit = mix(1.4,2.0,yellowLichen);
@@ -595,6 +597,3 @@ ambient.rgb += getTorchColor(lightUV.s, ambient.rgb, feetPos, blockLightNormal);
       gl_FragData[2] = vec4(vec3(0.0), 1.0);
    #endif
 }
-
-
-

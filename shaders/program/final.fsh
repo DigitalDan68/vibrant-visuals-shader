@@ -30,7 +30,7 @@ varying vec2 texUV;
 #include "/common/transformations.glsl"
 #include "/common/getReflectionColor.fsh"
 #include "/common/vibrant.glsl"
-#include "/common/entity_light_depth.glsl"
+#include "/common/held_light_depth.glsl"
 
 vec3 waterEntryPosition(vec2 uv,float depth) {
    if (depth < 1.0) return screen2view(uv,depth);
@@ -378,7 +378,7 @@ void main() {
    bool enchantedHeld = texelFetch(enchantedHeldSampler,ivec2(0),0).r != 0u;
    bool redstoneHeld = heldItemId == 42013 || heldItemId2 == 42013;
    if (enchantedHeld || redstoneHeld) {
-      float heldReceiverDepth=entityReceiverDepth(texUV);
+      float heldReceiverDepth=heldLightReceiverDepth(texUV);
       if (heldReceiverDepth > 0.56 && heldReceiverDepth < 1.0) {
          vec3 heldReceiver=screen2view(texUV,heldReceiverDepth);
          float enchantedFalloff=max(0.0,1.0-length(heldReceiver)/6.0);
@@ -536,5 +536,16 @@ void main() {
          color.rgb = pow(labHighlightShoulder(pow(max(color.rgb,vec3(0.0)),vec3(2.2))+highlight,0.65),vec3(1.0/2.2));
       }
    #endif
+   // Apply status darkness after atmosphere, reflection, emission and bloom.
+   // Distant sky and DH geometry must fade together with the native world.
+   float statusDarkness=clamp(max(darknessFactor,blindness),0.0,1.0);
+   if (statusDarkness>0.0) {
+      float visibleDepth=texture2D(depthtex0,texUV).x;
+      float visibleDistance=length(vvOpaquePosition(texUV));
+      if (visibleDepth<1.0) visibleDistance=length(screen2view(texUV,visibleDepth));
+      float statusFog=1.0-exp(-max(visibleDistance-2.0,0.0)*0.45);
+      if (visibleDepth<0.56) statusFog=0.35;
+      color.rgb*=1.0-statusDarkness*statusFog;
+   }
    gl_FragData[0] = color;
 }

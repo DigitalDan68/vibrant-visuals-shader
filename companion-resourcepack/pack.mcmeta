@@ -1,0 +1,13 @@
+{
+  "pack": {
+    "description": "Vibrant Visuals: enchanted-item lighting for LambDynamicLights",
+    "min_format": [
+      97,
+      1
+    ],
+    "max_format": [
+      97,
+      1
+    ]
+  }
+}

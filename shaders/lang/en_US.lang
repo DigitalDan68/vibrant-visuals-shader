@@ -258,8 +258,6 @@ option.PACK_FULLBRIGHT_ENTITIES.comment=Honor fullbright entity draws used by ET
 option.LAMB_DYNAMIC_LIGHTS=LambDynamicLights Compatibility
 option.LAMB_DYNAMIC_LIGHTS.comment=Use the mod lightmap for dynamic lighting. Disables shader held-item lights to prevent duplication. Keeps emissive textures and colored static block lights. Enable only when LambDynamicLights is installed.
 
-
-
 option.BIOME_ATMOSPHERE=Biome Atmosphere
 option.BIOME_ATMOSPHERE.comment=Subtle biome sky and fog palettes with smooth transitions. Preserves native brightness and weather; resource-pack and mod colors are blended. DH cloud colors are controlled by DH.
 option.BIOME_ATMOSPHERE_STRENGTH=Biome Atmosphere Strength

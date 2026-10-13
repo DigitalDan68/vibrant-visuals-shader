@@ -1,0 +1,8 @@
+{
+  "match": {
+    "items": [
+      "minecraft:redstone"
+    ]
+  },
+  "luminance": 5
+}
