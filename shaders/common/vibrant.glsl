@@ -6,6 +6,7 @@ uniform sampler2D colortex4;
 #include "/common/bloom_sampling.glsl"
 uniform float viewWidth, viewHeight, frameTimeCounter;
 uniform ivec2 eyeBrightnessSmooth;
+uniform float nightVision;
 uniform vec3 skyColor, sunPosition;
 #ifndef THE_NETHER
 uniform vec3 fogColor;
@@ -292,7 +293,25 @@ vec3 vvEndSky(vec3 direction) {
    vec2 tiledUV = fract((uv*0.5+0.5)*16.0);
    vec3 textureColor = texture2D(endSkyTex,tiledUV).rgb;
    // Vanilla renders this texture with a dim grey vertex tint.
-   return pow(textureColor*0.16,vec3(2.2))*END_SKY_GLOW;
+   // A black star field stays visible between native End flashes.
+   vec2 starUV=(uv*0.5+0.5)*END_STARS_AMOUNT;
+   vec2 starCell=floor(starUV);
+   float faceSeed=axis.x>=axis.y && axis.x>=axis.z ? 13.0 : (axis.y>=axis.z ? 37.0 : 71.0);
+   faceSeed+=dot(sign(direction),vec3(3.0,5.0,7.0));
+   float starHash=fract(sin(dot(starCell,vec2(127.1,311.7))+faceSeed)*43758.5453);
+   float starRadius=length(fract(starUV)-0.5);
+   float star=step(0.9975,starHash)*(1.0-smoothstep(0.08,0.22,starRadius));
+   float twinkle=0.8+0.2*sin(frameTimeCounter*END_STARS_SPEED+starHash*100.0);
+   vec3 sky=vec3(0.72,0.77,1.0)*star*twinkle*END_STARS_OPACITY;
+#ifdef END_FLASH_SKY
+   // Light wells upward from the void, fading to black toward the zenith.
+   float flash=max(endFlashIntensity,0.0)*END_FLASH_STRENGTH;
+   float voidGradient=pow(1.0-smoothstep(-0.45,0.85,direction.y),1.6);
+   // Vanilla Enderman eye highlight: RGB 224,121,250 (#E079FA).
+   vec3 flashColor=pow(vec3(224.0,121.0,250.0)/255.0,vec3(2.2));
+   sky+=flashColor*flash*voidGradient*END_SKY_GLOW;
+#endif
+   return sky;
 #else
    return vec3(0.0);
 #endif
@@ -466,7 +485,9 @@ vec3 vvWaterFog(vec3 scene, vec3 startPosition, vec3 endPosition) {
    vec3 biomeTint = isEyeInWater == 1 ? fogColor : (waterTintData.a > 0.5 ? waterTintData.rgb : fogColor);
    if (isEyeInWater == 0 && waterTintData.a < 0.5) biomeTint = vec3(0.25,0.46,0.75);
    // One concentration-driven medium on both sides of the surface.
-   float submergedDensity=isEyeInWater == 1 ? 1.7 : 1.0;
+   float submergedDensity=isEyeInWater == 1 ? 1.45 : 1.0; // Approximately 17% farther underwater visibility.
+   // Iris includes Conduit Power in nightVision, with water-vision ramping.
+   if (isEyeInWater == 1) submergedDensity*=mix(1.0,0.45,clamp(nightVision,0.0,1.0));
    vec3 extinction=waterTintExtinction(biomeTint)*WATER_FOG_DENSITY*2.5*submergedDensity;
    vec3 scatterCoefficient=waterScatteringCoefficients()*WATER_FOG_DENSITY*1.40*submergedDensity;
    // Water metadata preserves local skylight and block light even above ground.
@@ -476,6 +497,13 @@ vec3 vvWaterFog(vec3 scene, vec3 startPosition, vec3 endPosition) {
    vec3 scattering = scatterCoefficient * WATER_SCATTERING * light;
    vec3 transmission = vec3(1.0);
    vec3 radiance = vec3(0.0);
+#ifdef WATER_LIGHT_SHAFTS
+   // Pure/clear water has no shaft contribution. Suspended particles dominate
+   // scattering; dissolved organic matter also raises murkiness modestly.
+   vec3 particleScatter=max(waterScatteringCoefficients()-vec3(0.002,0.006,0.010),vec3(0.0));
+   float murkiness=dot(particleScatter,vec3(0.333333))+clamp(WATER_CDOM,0.0,15.0)*0.001;
+   float shaftMurkiness=smoothstep(0.0001,0.0025,murkiness); // Visible subtle rays at the default concentrations.
+#endif
 
 #if WATER_VOLUMETRIC_SAMPLES > 0
    int waterSamples = WATER_VOLUMETRIC_SAMPLES;
@@ -487,28 +515,30 @@ vec3 vvWaterFog(vec3 scene, vec3 startPosition, vec3 endPosition) {
       vec3 stepTransmission = exp(-extinction*stepLength*density);
       vec3 localScattering = scattering;
 #ifdef OVERWORLD
-      vec3 waterDirection = normalize(endPosition-startPosition);
-      float phase = vvForwardPhase(dot(waterDirection,normalize(sunPosition)));
-      float sunUp = smoothstep(0.0,0.12,normalize(view2eye(sunPosition)).y);
-      float sunVisibility=vvSunVisibility(world);
-      float daylight=sunUp*(1.0-rainStrength)*waterSky;
-      localScattering *= 0.65+0.35*sunVisibility*daylight*min(phase,3.0);
+      // Ambient water fog remains uniform; shafts are a separate submerged effect.
+      localScattering*=0.65;
 #ifdef WATER_LIGHT_SHAFTS
-      // Project the animated caustic pattern along the sun direction. Points on
-      // the same light ray share a pattern value, forming coherent light columns.
-      vec3 sunWorld=normalize(view2eye(sunPosition));
-      vec2 shaftPosition=world.xz-world.y*sunWorld.xz/max(sunWorld.y,0.12);
-      // Broad shafts and larger coverage cells avoid clipping them into thin strips.
-      float shaftPattern=vvCausticPattern(vec3(shaftPosition.x*0.2,0.0,shaftPosition.y*0.2));
-      // Reduce shaft coverage only; the lake-bed caustic texture stays intact.
-      vec2 shaftCell=floor(shaftPosition/4.0);
-      float shaftCoverage=fract(sin(dot(shaftCell,vec2(127.1,311.7)))*43758.5453);
-      shaftPattern*=step(0.75,shaftCoverage);
-      float shaftPhase=0.35+min(phase,4.0);
-      vec3 shaftLight=scatterCoefficient*WATER_SCATTERING*vvCausticSunColor()
-         *shaftPattern*8.0*shaftPhase*sunVisibility*daylight;
-      // Rays use the same RGB absorption and integration as the water fog.
-      localScattering+=shaftLight;
+      float shaftDistance=length(world-cameraPosition);
+      if (isEyeInWater==1 && shaftMurkiness>0.0 && shaftDistance<30.0) {
+         // Fade across the outer eight blocks and skip all shaft work beyond 30.
+         float shaftRange=1.0-smoothstep(22.0,30.0,shaftDistance);
+         vec3 waterDirection=normalize(endPosition-startPosition);
+         float phase=vvForwardPhase(dot(waterDirection,normalize(sunPosition)));
+         vec3 sunWorld=normalize(view2eye(sunPosition));
+         float sunUp=smoothstep(0.0,0.12,sunWorld.y);
+         float daylight=sunUp*(1.0-rainStrength)*waterSky;
+         if (daylight>0.0) {
+            float sunVisibility=vvSunVisibility(world);
+            vec2 shaftPosition=world.xz-world.y*sunWorld.xz/max(sunWorld.y,0.12);
+            float shaftPattern=vvCausticPattern(vec3(shaftPosition.x*0.2,0.0,shaftPosition.y*0.2));
+            vec2 shaftCell=floor(shaftPosition/4.0);
+            float shaftCoverage=fract(sin(dot(shaftCell,vec2(127.1,311.7)))*43758.5453);
+            shaftPattern*=step(0.75,shaftCoverage);
+            float shaftPhase=0.35+min(phase,4.0);
+            localScattering+=scatterCoefficient*WATER_SCATTERING*vvCausticSunColor()
+               *shaftPattern*8.0*shaftPhase*sunVisibility*daylight*shaftMurkiness*shaftRange;
+         }
+      }
 #endif
 #endif
       // Integrate RGB single scattering with the same extinction as transmission.

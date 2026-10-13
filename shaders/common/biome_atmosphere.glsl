@@ -25,7 +25,11 @@ vec3 vvBiomeAtmosphereColor(vec3 base,float skyWeight) {
    vec3 jungleColor=mix(base,vvPaletteBrightness(jungleTint,brightness),clamp(strength*1.15,0.0,1.0));
    vec3 snowColor=mix(base,vvPaletteBrightness(base*vec3(0.91,1.01,1.14),brightness),strength);
    vec3 paleColor=mix(base,vec3(brightness*0.78),strength);
-   return (base*ordinary+desertColor*desert+mesaColor*mesa+swampColor*swamp+jungleColor*jungle+snowColor*snow+paleColor*pale)/max(ordinary+total,0.00001);
+   // Direct cross-dissolve of complete biome endpoints: no hue rotation,
+   // intermediate palette, or brightness renormalization after interpolation.
+   vec3 dissolved=base*ordinary+desertColor*desert+mesaColor*mesa
+      +swampColor*swamp+jungleColor*jungle+snowColor*snow+paleColor*pale;
+   return dissolved/max(ordinary+total,0.00001);
 #else
    return base;
 #endif
