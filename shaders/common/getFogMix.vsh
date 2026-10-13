@@ -1,8 +1,6 @@
 #include "/common/dry_biome_fog.glsl"
 uniform float fogEnd, fogStart;
-#if defined THE_NETHER || defined THE_END || defined THE_SIFT
 uniform float blindness, darknessFactor;
-#endif
 uniform float near;
 #ifndef BLOCK_FAR_DECLARED
 uniform float far;
@@ -42,6 +40,9 @@ float calcFogMix(vec3 feetPos, float fogStartMult, float rangeFar) {
 }
 
 float getFogMix(vec3 feetPos) {
+   // Final applies status darkness uniformly to native terrain, DH, sky and bloom.
+   // Do not also apply Minecraft's short-range black vertex fog/discard cutoff.
+   if (isEyeInWater == 0 && (darknessFactor>0.0 || blindness>0.0)) return 0.0;
 #ifdef GBUFFERS_CLOUDS
    // Clouds remain in air even when the camera is submerged. Preserve their
    // atmospheric distance fade instead of suppressing it for water fog.

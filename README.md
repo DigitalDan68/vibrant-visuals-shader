@@ -16,7 +16,7 @@ Integrated materials allow resource-pack normal and specular maps to override th
 
 ## Water and atmosphere
 
-Water includes animated Bedrock normal and caustics assets, turquoise absorption and scattering, textured reflections and independent water volumetric quality. Water and atmosphere support up to 128 samples. Water light shafts are enabled by Ultra; lower profiles disable them. Caustics default to scale 2 and strength 6. Asset origins are recorded in shaders/textures/WATER_ASSET_SOURCE.md.
+Water includes animated Bedrock normal and caustics assets, turquoise absorption and scattering, textured reflections and independent water volumetric quality. Water and atmosphere support up to 128 samples. Water light shafts are enabled by Ultra; lower profiles disable them. Shafts appear only underwater, scale with murkiness, and fade out between 22 and 30 blocks. Conduit Power and Night Vision reduce underwater fog. Caustics default to scale 2 and strength 6. Asset origins are recorded in shaders/textures/WATER_ASSET_SOURCE.md.
 
 Biome atmosphere and dry-biome storms include smooth palette transitions and square wind-blown particles. Integrated PBR specular is capped at 25%, with texture-selective emission for lanterns, glow lichen, sculk and other emitters.
 
@@ -30,7 +30,9 @@ Install the separate Dynamic Lights ZIP from the release into resourcepacks and 
 
 ## Compatibility and development status
 
-This is a development fork. Minecraft 1.21.1 and 1.21.11 are planned compatibility targets and have not yet been tested. Current validation used an NVIDIA RTX 5060 Ti; AMD and Intel hardware have not been tested. The current shader requires OpenGL 4.3 across all profiles and does not support native macOS OpenGL on Apple Silicon.
+Version 1.0.0 is the first stable release of this fork. Minecraft 1.21.1 and 1.21.11 are planned compatibility targets and have not yet been tested. Current validation used an NVIDIA RTX 5060 Ti; AMD and Intel hardware have not been tested. The current shader requires OpenGL 4.3 across all profiles and does not support native macOS OpenGL on Apple Silicon.
+
+The End retains stars against a black sky, with native flashes illuminating a void-origin gradient colored from the Enderman eye texture. Biome sky transitions use a direct cross-dissolve. Darkness uses a consistent final-scene fade; Night Vision, Nausea, Blindness and Conduit Power have been checked in-game by the player.
 
 ## Credits
 

@@ -544,8 +544,10 @@ void main() {
       float visibleDistance=length(vvOpaquePosition(texUV));
       if (visibleDepth<1.0) visibleDistance=length(screen2view(texUV,visibleDepth));
       float statusFog=1.0-exp(-max(visibleDistance-2.0,0.0)*0.45);
-      if (visibleDepth<0.56) statusFog=0.35;
-      color.rgb*=1.0-statusDarkness*statusFog;
+      if (blindness<=darknessFactor) statusFog=0.18+0.82*statusFog;
+      if (visibleDepth<0.56) statusFog=0.20;
+      float darknessStrength=1.0;
+      color.rgb*=1.0-statusDarkness*statusFog*darknessStrength;
    }
    gl_FragData[0] = color;
 }
