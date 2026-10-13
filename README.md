@@ -1,44 +1,85 @@
-# Vibrant Visuals Shader: A fork of Miniature shader by ukrech
+# Vibrant Visuals Shader
 
 ![Vibrant Visuals Shader: reflective water beneath a forest waterfall](README_IMG.png)
 
-A modified fork of [Miniature shader by ukrech](https://github.com/mateuskreuch/minecraft-miniature-shader). The original MIT license and copyright notice are included in LICENSE; the original README is preserved in README_ORIGINAL.md.
+Vibrant Visuals Shader brings a Bedrock-inspired atmosphere to Minecraft Java Edition while keeping Minecraft's pixel style. It combines colorful biome skies, reflective water, animated caustics, volumetric fog, and glowing materials, with settings that let you shape the look and choose your performance level.
+
+This is a fork of [Miniature shader by ukrech](https://github.com/mateuskreuch/minecraft-miniature-shader), maintained by DigitalDan68. Version **1.0.0** is available from [GitHub Releases](https://github.com/DigitalDan68/vibrant-visuals-shader/releases/latest).
+
+## Features
+
+### Water
+
+- Animated Bedrock water normal textures with pixel-style waves, reflections, and sun and moon glints.
+- Turquoise depth coloring with absorption and scattering controls for CDOM, chlorophyll, suspended sediment, and biome tint.
+- Underwater refraction with a textured overhead viewing window and subtle underside reflections.
+- Animated Bedrock caustics aligned to Minecraft's 16×16 block pixel grid, with adjustable scale, strength, animation speed, and contrast.
+- Underwater sunlight shafts that respond to water murkiness and fade out by 30 blocks. Ultra enables them by default.
+- Separate water and atmospheric volumetric quality settings, each supporting up to 128 samples.
+- Improved underwater visibility with Conduit Power and Night Vision.
+
+### Atmosphere and weather
+
+- Biome-specific sky and fog colors with direct cross-dissolve transitions.
+- Sandy deserts, orange Badlands and Savannas, dark green swamps, aquamarine jungles, cool snowy biomes, and dense gray Pale Garden fog.
+- Dense sandy storm fog and square wind-blown particles in desert and Badlands biomes. Thunderstorms increase wind speed; rain uses fewer particles.
+- Savanna weather darkens the sky without sandy storm fog or particles.
+- Height fog, atmospheric light shafts, twilight rays, and adjustable weather opacity.
+- Distant Horizons support for distant terrain and water, with cloud compatibility.
+
+### Lighting and materials
+
+- Directional shadows, colored stained-glass and translucent-ice shadows, and optional cloud shadows.
+- Colored glass shadows enabled by Ultra; cloud shadow strength defaults to zero.
+- Screen-space reflections for supported blocks, glass, and water.
+- Integrated PBR materials with specular capped at 25%, including metallic rail sections and minecarts.
+- Resource-pack normal and specular maps can override the integrated material defaults.
+- Selective emission for lantern interiors, torch flames, glow lichen, sculk flecks, Creaking eyes, activated Creaking hearts, and other luminous materials.
+- Bloom, ambient occlusion, exposure controls, and adjustable color grading.
+- Support for Darkness, Blindness, Night Vision, and Nausea visual effects.
+- Optional glowing ores and waxed-block highlighting.
+
+### Dimensions and customization
+
+- Overworld, Nether, End, and The Sift support.
+- Stars against a black End sky, with Enderman-purple flashes that illuminate a gradient rising from the void.
+- Configurable Nether and End fog and ambient lighting, plus End sky glow.
+- The Sift's own sky palette, mist, ambient glow, light shafts, and atmospheric motes.
+- **Lowest, Low, Normal, High, and Ultra** presets, with separate menus for materials, lighting, water, atmosphere, dimensions, and performance.
+- LambDynamicLights compatibility and an optional companion resource pack for enchanted items, custom emitters, and supported emissive mobs.
 
 ## Installation
 
-Download the shader ZIP from Releases, place it in your Minecraft shaderpacks folder, and select it in Iris. For development, put this repository folder in shaderpacks; its shaders directory must be directly inside that folder.
+### Shader pack
 
-Developed against Minecraft 26.3 with Iris 1.11.7, Sodium, and Distant Horizons. Includes Lowest, Low, Normal, High, and Ultra profiles, plus Overworld, Nether, End, and The Sift dimension programs.
+1. Set up **Minecraft Java 26.3** with **Fabric**, **Iris**, and **Sodium**. Distant Horizons is optional; install it if you want distant terrain rendering.
+2. Download **Vibrant Visuals Shader v1.0.0.zip** from [Releases](https://github.com/DigitalDan68/vibrant-visuals-shader/releases/latest).
+3. Place the ZIP in your instance's `shaderpacks` folder. Keep it zipped.
+4. Launch Minecraft, open **Options → Video Settings → Shader Packs**, and select the shader.
+5. Open the shader settings and choose a quality preset. Start with **Normal** or **High**, then adjust to suit your system.
 
-## Settings
+In Prism Launcher, right-click your instance and open its Minecraft folder to find `shaderpacks`. The shader ZIP must contain the `shaders` folder directly at its root.
 
-Shader entity illumination and colored block lighting have been removed. Emissive textures and bloom remain. Ultra increases quality settings and enables underwater light shafts and colored glass shadows.
+### Optional Dynamic Lights resource pack
 
-Integrated materials allow resource-pack normal and specular maps to override their defaults. Resource-pack compatibility options are available under Materials.
+1. Install **LambDynamicLights** for your Minecraft version.
+2. Download **Vibrant Visuals Dynamic Lights v1.0.0.zip** from the same release.
+3. Place it in your instance's `resourcepacks` folder and enable it in Minecraft's Resource Packs menu.
+4. Enable **LambDynamicLights Compatibility** under the shader's **Lighting** settings.
 
-## Water and atmosphere
+The companion pack targets Minecraft 26.3. Its mob rules apply to entire species; see [its README](companion-resourcepack/README.txt) for details. Dynamic lighting comes from LambDynamicLights; the shader retains emissive textures and bloom.
 
-Water includes animated Bedrock normal and caustics assets, turquoise absorption and scattering, textured reflections and independent water volumetric quality. Water and atmosphere support up to 128 samples. Water light shafts are enabled by Ultra; lower profiles disable them. Shafts appear only underwater, scale with murkiness, and fade out between 22 and 30 blocks. Conduit Power and Night Vision reduce underwater fog. Caustics default to scale 2 and strength 6. Asset origins are recorded in shaders/textures/WATER_ASSET_SOURCE.md.
+## Compatibility
 
-Biome atmosphere and dry-biome storms include smooth palette transitions and square wind-blown particles. Integrated PBR specular is capped at 25%, with texture-selective emission for lanterns, glow lichen, sculk and other emitters.
+The current release targets Minecraft 26.3 and requires **OpenGL 4.3**. Native macOS OpenGL is unsupported. Support for older Minecraft versions is planned.
 
-Caustics through underwater glass enclosures remain unresolved; the experimental changes were reverted.
-
-## LambDynamicLights
-
-Enable LambDynamicLights Compatibility under Lighting when using the mod. LDL supplies dynamic light through the native lightmap; the shader preserves surface glow and avoids competing held lights. LDL does not supply custom RGB light colors.
-
-Install the separate Dynamic Lights ZIP from the release into resourcepacks and enable it for enchanted items, custom emitters and supported emissive mobs. The companion pack currently targets Minecraft 26.3. Its mob rules are species-wide approximations; see companion-resourcepack/README.txt for state-only emission limitations.
-
-## Compatibility and development status
-
-Version 1.0.0 is the first stable release of this fork. Minecraft 1.21.1 and 1.21.11 are planned compatibility targets and have not yet been tested. Current validation used an NVIDIA RTX 5060 Ti; AMD and Intel hardware have not been tested. The current shader requires OpenGL 4.3 across all profiles and does not support native macOS OpenGL on Apple Silicon.
-
-The End retains stars against a black sky, with native flashes illuminating a void-origin gradient colored from the Enderman eye texture. Biome sky transitions use a direct cross-dissolve. Darkness uses a consistent final-scene fade; Night Vision, Nausea, Blindness and Conduit Power have been checked in-game by the player.
+Caustics through underwater glass enclosures are not currently supported. The Sift's atmosphere applies when the corresponding dimension mod is installed.
 
 ## Credits
 
-Original Miniature shader: ukrech (Mateus A. Kreuch). Fork maintained by DigitalDan68. This project is not an official Mojang or Microsoft shader pack. Original MIT license retained.
+Original Miniature shader by **ukrech (Mateus A. Kreuch)**. Fork maintained by **DigitalDan68**. The original MIT license and copyright notice are retained in [LICENSE](LICENSE), and the original README is preserved in [README_ORIGINAL.md](README_ORIGINAL.md).
+
+Minecraft water asset origins are documented in [WATER_ASSET_SOURCE.md](shaders/textures/WATER_ASSET_SOURCE.md). This is not an official Mojang or Microsoft shader pack.
 
 ## Disclaimer 
 
