@@ -1,7 +1,9 @@
+#include "/common/dry_biome_fog.glsl"
 #include "/common/water_optics.glsl"
 uniform sampler2D waterCausticTex;
 uniform sampler2D colortex2;
 uniform sampler2D colortex4;
+#include "/common/bloom_sampling.glsl"
 uniform float viewWidth, viewHeight, frameTimeCounter;
 uniform ivec2 eyeBrightnessSmooth;
 uniform vec3 skyColor, sunPosition;
@@ -9,6 +11,7 @@ uniform vec3 skyColor, sunPosition;
 uniform vec3 fogColor;
 #endif
 uniform float rainStrength;
+uniform float thunderStrength;
 #if defined OVERWORLD || defined THE_SIFT
 uniform int worldTime;
 #endif
@@ -76,7 +79,7 @@ vec3 vvBloom(vec2 uv) {
       // Five vertical taps finish the same separable Gaussian footprint.
       for (int y=-2;y<=2;++y) {
          float weight = y == 0 ? 1.0 : (abs(y) == 1 ? 0.60653066 : 0.13533528);
-         light += texture2D(colortex4,clamp(uv+vec2(0.0,float(y)*radius.y),0.0,1.0)).rgb*weight;
+         light += vvSmoothBloom(clamp(uv+vec2(0.0,float(y)*radius.y),0.0,1.0))*weight;
       }
       float bloomMultiplier = 1.0;
 #ifdef OVERWORLD
@@ -120,7 +123,7 @@ vec3 vvVolumetricsBetween(vec3 scene,vec3 airStart,vec3 viewPos) {
 #ifdef TWILIGHT_RAYS
    twilight = smoothstep(-0.025,0.035,sunUp)*(1.0-smoothstep(0.12,0.35,sunUp))*TWILIGHT_RAY_STRENGTH;
 #endif
-   vec3 ambient = pow(max(isEyeInWater == 1 ? skyColor : fogColor,vec3(0.0)),vec3(2.2))*0.35;
+   vec3 ambient = pow(max(isEyeInWater == 1 ? skyColor : vvDryBiomeFogColor(fogColor),vec3(0.0)),vec3(2.2))*0.35;
    int raySamples = VOLUMETRIC_SAMPLES;
    float stepLength = range/float(raySamples);
    float transmission = 1.0;
@@ -129,6 +132,7 @@ vec3 vvVolumetricsBetween(vec3 scene,vec3 airStart,vec3 viewPos) {
    for (int i=0;i<raySamples;++i) {
       vec3 world = view2feet(airStart+direction*((float(i)+0.5)*stepLength))+cameraPosition;
       float density = FOG_DENSITY*atmosphereWeight*mix(0.75,1.25,vvFogNoise(world*0.025));
+      if (isEyeInWater == 0) density *= mix(1.0,8.0,max(clamp(vvDryBiomeDust,0.0,1.0),clamp(vvPaleGarden,0.0,1.0)));
 #ifdef HEIGHT_FOG
       density *= clamp(exp(-(world.y-FOG_HEIGHT)/48.0),0.25,1.5);
 #endif
@@ -175,8 +179,55 @@ vec3 vvToneMap(vec3 linearColor) {
 }
 
 float vvFogNoise(vec3 p);
+vec3 vvSandSpecks(vec3 scene,vec3 viewPos) {
+#if defined OVERWORLD && defined ENABLE_FOG
+   float storm=clamp(vvDryBiomeDust,0.0,1.0);
+   float outside=smoothstep(0.1,0.5,float(eyeBrightnessSmooth.y)/240.0);
+   if (storm<0.001 || outside<0.001 || isEyeInWater!=0) return scene;
+   float limit=min(length(viewPos),28.0);
+   if (limit<0.2) return scene;
+   vec3 ray=normalize(view2feet(viewPos));
+   vec3 wind=normalize(vec3(1.0,0.08,0.45));
+   vec3 axis=normalize(cross(wind,vec3(0.0,1.0,0.0)));
+   vec3 vertical=cross(axis,wind);
+   float facing=dot(ray,wind);
+   if (abs(facing)<0.025) return scene;
+   float thunder=clamp(thunderStrength,0.0,1.0);
+   float windTime=frameTimeCounter*mix(1.0,2.0,thunder);
+   float drift=windTime*4.0;
+   float origin=dot(cameraPosition,wind)-drift;
+   float first=floor(origin/1.8);
+   vec3 sand=vvStormSandTint()*0.8*max(dot(fogColor,vec3(0.2126,0.7152,0.0722)),0.035);
+   for(int layer=0;layer<16;++layer) {
+      float plane=first+(facing>0.0 ? float(layer)+1.0 : -float(layer));
+      float distance=(plane*1.8-origin)/facing;
+      if(distance<=0.2 || distance>=limit) continue;
+      vec3 hit=cameraPosition+ray*distance;
+      vec2 position=vec2(dot(hit,axis),dot(hit,vertical))-vec2(windTime*0.15,windTime*0.08);
+      vec2 cell=floor(position);
+      float seed=fract(sin(dot(cell,vec2(12.9898,78.233))+plane*37.13)*43758.5453);
+      if(seed<mix(0.89,0.68,thunder)) continue;
+      vec2 center=vec2(fract(seed*17.31),fract(seed*43.71))*0.8+0.1;
+      // Camera-facing square centered on a drifting world-space grain.
+      vec3 grain=wind*(plane*1.8+drift)
+                +axis*(cell.x+center.x+windTime*0.15)
+                +vertical*(cell.y+center.y+windTime*0.08);
+      vec3 grainView=feet2view(grain-cameraPosition);
+      vec3 viewRay=normalize(viewPos);
+      if (grainView.z>=-0.1 || abs(viewRay.z)<0.001) continue;
+      float grainDistance=grainView.z/viewRay.z;
+      if(grainDistance<=0.2 || grainDistance>=limit) continue;
+      vec2 delta=(viewRay*grainDistance-grainView).xy/0.04;
+      float edge=max(abs(delta.x),abs(delta.y));
+      float speck=(1.0-smoothstep(0.85,1.0,edge))*exp(-grainDistance/22.0);
+      scene=mix(scene,sand,speck*storm*outside*0.7);
+   }
+#endif
+   return scene;
+}
+
 vec3 vvVolumetrics(vec3 scene,vec3 viewPos) {
-   return vvVolumetricsBetween(scene,vec3(0.0),viewPos);
+   return vvSandSpecks(vvVolumetricsBetween(scene,vec3(0.0),viewPos),viewPos);
 }
 float vvSunVisibility(vec3 world) {
 #if defined ENABLE_SHADOWS && (defined OVERWORLD || defined THE_SIFT)
@@ -194,20 +245,19 @@ float vvSunVisibility(vec3 world) {
 #endif
 }
 float vvCausticPattern(vec3 worldPosition) {
-   vec2 pixel = (floor(worldPosition.xz*float(CAUSTICS_PIXELS))+0.5)/float(CAUSTICS_PIXELS);
    ivec2 atlasSize = textureSize(waterCausticTex,0);
    float width = float(max(atlasSize.x,1));
    float frames = float(max(atlasSize.y/max(atlasSize.x,1),1));
-   float frame = mod(floor(frameTimeCounter*10.0*CAUSTICS_SPEED),frames);
-   // Sample the same resource-pack water sprite as the surface highlight.
-   // Pixel centers and explicit LOD avoid filtering across animation frames.
-   vec2 tile = (floor(fract(pixel*CAUSTICS_SCALE)*width)+0.5)/width;
+   // Bedrock renderer caustics: 64 frames, 0.09 seconds per frame.
+   float frame = mod(floor(frameTimeCounter*CAUSTICS_SPEED/0.09),frames);
+   // Match Bedrock's inverse scale convention and retain the original texels.
+   // Anchor light cells at block texture pixel centers before scaling the atlas.
+   // All animation frames therefore share the same world-space 16x16 grid.
+   vec2 gridPosition=(floor(worldPosition.xz*16.0)+0.5)/16.0;
+   vec2 tile = (floor(fract(gridPosition/max(CAUSTICS_SCALE,0.01))*width)+0.5)/width;
    vec2 uv = vec2(tile.x,(tile.y+frame)/frames);
-   vec3 texel = texture2DLod(waterCausticTex,uv,0.0).rgb;
-   float value = max(texel.r,max(texel.g,texel.b));
-   float mask = smoothstep(min(WATER_GLINT_CUTOFF+0.1,0.99),min(WATER_GLINT_CUTOFF+0.3,1.0),value);
-   float brightness = mix(0.2,1.0,vvFogNoise(vec3(pixel*0.65,frameTimeCounter*0.035)));
-   return pow(mask,CAUSTICS_POWER)*brightness;
+   float value = texture2DLod(waterCausticTex,uv,0.0).r;
+   return pow(max(value,0.0),CAUSTICS_POWER);
 }
 vec3 vvCausticSunColor() {
 #ifdef OVERWORLD
@@ -400,10 +450,10 @@ vec3 vvSiftAtmosphere(vec3 viewPosition) {
 vec3 vvWaterSurfaceTint(vec3 scene) {
    vec4 data = texture2D(colortex2,texUV);
    if (data.a <= 0.5) return scene;
-   vec3 tint = pow(clamp(data.rgb,0.0,1.0),vec3(2.2));
+   vec3 tint = pow(waterStyledTint(data.rgb),vec3(2.2));
    float peak = max(tint.r,max(tint.g,tint.b));
    if (peak < 0.0001) return scene;
-   return scene*mix(vec3(1.0),tint/peak,0.65);
+   return scene*mix(vec3(1.0),tint/peak,0.15);
 }
 vec3 vvWaterFog(vec3 scene, vec3 startPosition, vec3 endPosition) {
 #ifdef WATER_VOLUMETRICS
@@ -417,20 +467,20 @@ vec3 vvWaterFog(vec3 scene, vec3 startPosition, vec3 endPosition) {
    // Surface metadata varies with plants, waves and view direction.
    vec3 biomeTint = isEyeInWater == 1 ? fogColor : (waterTintData.a > 0.5 ? waterTintData.rgb : fogColor);
    if (isEyeInWater == 0 && waterTintData.a < 0.5) biomeTint = vec3(0.25,0.46,0.75);
-   vec3 extinction = waterTintExtinction(biomeTint)*WATER_FOG_DENSITY;
-   vec3 tint = pow(max(biomeTint,vec3(0.0)),vec3(2.2));
-   tint *= 0.12 / max(max(tint.r,tint.g),max(tint.b,0.0001));
+   // One concentration-driven medium on both sides of the surface.
+   float submergedDensity=isEyeInWater == 1 ? 1.7 : 1.0;
+   vec3 extinction=waterTintExtinction(biomeTint)*WATER_FOG_DENSITY*2.5*submergedDensity;
+   vec3 scatterCoefficient=waterScatteringCoefficients()*WATER_FOG_DENSITY*1.40*submergedDensity;
    // Water metadata preserves local skylight and block light even above ground.
    float waterSky = isEyeInWater == 0 && waterTintData.a > 0.5 ? clamp((waterTintData.a-0.6)/0.4,0.0,1.0) : clamp(float(eyeBrightnessSmooth.y)/240.0,0.0,1.0);
    float waterBlock = isEyeInWater == 0 && waterTintData.a > 0.5 ? clamp((texture2D(colortex7,texUV).a-0.6)/0.4,0.0,1.0) : clamp(float(eyeBrightnessSmooth.x)/240.0,0.0,1.0);
    float light = max(CAVE_AMBIENT,max(waterSky,0.6*waterBlock));
-   vec3 scattering = tint * WATER_SCATTERING * light;
+   vec3 scattering = scatterCoefficient * WATER_SCATTERING * light;
    vec3 transmission = vec3(1.0);
    vec3 radiance = vec3(0.0);
-   float fogExtinction = min(extinction.r,min(extinction.g,extinction.b));
-   float fogTransmission = 1.0;
-#if VOLUMETRIC_SAMPLES > 0
-   int waterSamples = VOLUMETRIC_SAMPLES;
+
+#if WATER_VOLUMETRIC_SAMPLES > 0
+   int waterSamples = WATER_VOLUMETRIC_SAMPLES;
    float stepLength = distanceInWater / float(waterSamples);
    for (int i=0; i<waterSamples; ++i) {
       float t = (float(i)+0.5)/float(waterSamples);
@@ -442,17 +492,35 @@ vec3 vvWaterFog(vec3 scene, vec3 startPosition, vec3 endPosition) {
       vec3 waterDirection = normalize(endPosition-startPosition);
       float phase = vvForwardPhase(dot(waterDirection,normalize(sunPosition)));
       float sunUp = smoothstep(0.0,0.12,normalize(view2eye(sunPosition)).y);
-      localScattering *= 0.65+0.35*vvSunVisibility(world)*sunUp*(1.0-rainStrength)*min(phase,3.0);
+      float sunVisibility=vvSunVisibility(world);
+      float daylight=sunUp*(1.0-rainStrength)*waterSky;
+      localScattering *= 0.65+0.35*sunVisibility*daylight*min(phase,3.0);
+#ifdef WATER_LIGHT_SHAFTS
+      // Project the animated caustic pattern along the sun direction. Points on
+      // the same light ray share a pattern value, forming coherent light columns.
+      vec3 sunWorld=normalize(view2eye(sunPosition));
+      vec2 shaftPosition=world.xz-world.y*sunWorld.xz/max(sunWorld.y,0.12);
+      // Broad shafts and larger coverage cells avoid clipping them into thin strips.
+      float shaftPattern=vvCausticPattern(vec3(shaftPosition.x*0.2,0.0,shaftPosition.y*0.2));
+      // Reduce shaft coverage only; the lake-bed caustic texture stays intact.
+      vec2 shaftCell=floor(shaftPosition/4.0);
+      float shaftCoverage=fract(sin(dot(shaftCell,vec2(127.1,311.7)))*43758.5453);
+      shaftPattern*=step(0.75,shaftCoverage);
+      float shaftPhase=0.35+min(phase,4.0);
+      vec3 shaftLight=scatterCoefficient*WATER_SCATTERING*vvCausticSunColor()
+         *shaftPattern*8.0*shaftPhase*sunVisibility*daylight;
+      // Rays use the same RGB absorption and integration as the water fog.
+      localScattering+=shaftLight;
 #endif
-      float fogStep = exp(-fogExtinction*stepLength*density);
-      radiance += fogTransmission * localScattering * (1.0-fogStep);
-      fogTransmission *= fogStep;
+#endif
+      // Integrate RGB single scattering with the same extinction as transmission.
+      radiance += transmission*(localScattering/max(extinction,vec3(0.00001)))*(vec3(1.0)-stepTransmission);
       transmission *= stepTransmission;
       if (max(transmission.r,max(transmission.g,transmission.b)) < 0.005) break;
    }
 #else
    transmission = exp(-extinction*distanceInWater);
-   radiance = scattering*(1.0-exp(-fogExtinction*distanceInWater));
+   radiance = (scattering/max(extinction,vec3(0.00001)))*(vec3(1.0)-transmission);
 #endif
    return scene*transmission+radiance;
 #else

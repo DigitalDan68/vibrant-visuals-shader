@@ -16,6 +16,7 @@ varying vec3 normalizedViewPos;
 varying vec4 color;
 
 #include "/common/math.glsl"
+#include "/common/biome_atmosphere.glsl"
 
 void main() {
 #if MC_VERSION >= 12111
@@ -27,7 +28,7 @@ void main() {
 
    albedo.a = mix(albedo.a, 0, fogMix);
    // Underwater fogColor belongs to the water volume, not the cloud layer.
-   vec3 atmosphereColor = isEyeInWater == 1 ? skyColor : fogColor;
+   vec3 atmosphereColor = isEyeInWater == 1 ? skyColor : vvBiomeAtmosphereColor(fogColor,0.0);
    albedo.rgb = mix(albedo.rgb, atmosphereColor, 0.6);
    // Keep the cloud layer continuous; bloom handles glare without an angular hole.
 

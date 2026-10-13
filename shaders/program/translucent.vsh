@@ -10,6 +10,7 @@ uniform int worldTime;
 uniform sampler2D lightmap;
 uniform vec3 sunPosition;
 
+flat varying float redstonePower;
 flat varying float portalSurface;
 flat varying float glassSurface;
 flat varying float waterSurface;
@@ -40,6 +41,7 @@ varying vec4 color;
 
 void main() {
    gl_Position = ftransform();
+   redstonePower = mc_Entity.x >= 43201.0 && mc_Entity.x <= 43215.0 ? (mc_Entity.x-43200.0)/15.0 : 0.0;
    waterSurface = float(mc_Entity.x == 10008.0);
    glassSurface = float(mc_Entity.x == 30030.0);
    portalSurface = float(mc_Entity.x >= 30020.0 && mc_Entity.x <= 30022.0);
@@ -81,6 +83,6 @@ void main() {
    }
 
    if (glassSurface > 0.5) reflectivity = GLASS_REFLECTION_STRENGTH;
-   if (portalSurface > 0.5) reflectivity = 0.0;
+   if (portalSurface > 0.5 || redstonePower > 0.0) reflectivity = 0.0;
    normal = ndc2screen(normal);
 }

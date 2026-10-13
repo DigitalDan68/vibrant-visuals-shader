@@ -1,17 +1,12 @@
 #define PACK_OUTLINE_MARKERS
 #define PACK_FULLBRIGHT_ENTITIES
 //#define LAMB_DYNAMIC_LIGHTS
-//#define ENTITY_DYNAMIC_LIGHTING
 #define CAVE_AMBIENT 0.08 //[0.0 0.04 0.06 0.08 0.1 0.15]
 #define WATER_MOON_GLINT 0.15 //[0.0 0.05 0.1 0.15 0.25 0.5]
 #define WATER_TEXTURE_OVERLAY 1.0 //[0.0 0.25 0.5 0.75 1.0]
 //#define COLORED_GLASS_SHADOWS
 #define WATER_SCENE_REFLECTIONS
 #define WATER_SUN_GLINT 2.0 //[0.0 0.5 1.0 2.0 3.0 4.0]
-//#define COLORED_BLOCK_LIGHTING
-#define BLOCK_LIGHT_HORIZONTAL_RADIUS 64 //[32 40 48 56 64 72 80 88 96 104 112 120 128]
-#define BLOCK_LIGHT_VERTICAL_RADIUS 32 //[32 40 48 56 64 72 80 88 96 104 112 120 128]
-#define COLORED_LIGHT_STRENGTH 1.0 //[0.0 0.5 1.0 1.5 2.0]
 #define GLASS_REFLECTION_STRENGTH 0.35 //[0.0 0.15 0.25 0.35 0.5 0.75]
 #define SUNSET_BLOOM_BOOST 1.75 //[1.0 1.25 1.5 1.75 2.0 2.5 3.0]
 #define PORTAL_EMISSION 3.0 //[1.0 2.0 3.0 4.0 6.0]
@@ -21,10 +16,9 @@
 #endif
 #define INTEGRATED_EMISSION 1.0 //[0.0 0.5 1.0 1.5 2.0 3.0]
 #define INTEGRATED_METALS 1.0 //[0.0 0.25 0.5 0.75 1.0]
-#define CAUSTICS_SCALE 1.5 //[0.25 0.5 0.75 1.0 1.5 2.0]
+#define CAUSTICS_SCALE 2.0 //[0.25 0.5 0.75 1.0 1.5 2.0]
 #define CAUSTICS_SPEED 1.0 //[0.25 0.5 1.0 1.5 2.0]
-#define CAUSTICS_POWER 2.0 //[1.0 2.0 3.0 4.0]
-//#define LABPBR_BLOCK_LIGHTING
+#define CAUSTICS_POWER 1.0 //[1.0 2.0 3.0 4.0]
 #define LABPBR_NORMAL_STRENGTH 1.0 //[0.0 0.25 0.5 0.75 1.0 1.25 1.5 2.0]
 #define LABPBR_METAL_FACTOR 1.0 //[0.0 0.25 0.5 0.75 1.0]
 #define LABPBR_ROUGHNESS_SCALE 1.0 //[0.5 0.75 1.0 1.25 1.5 2.0]
@@ -62,11 +56,13 @@
 #endif
 #define FOG_DENSITY 1.0 //[0.25 0.5 0.75 1.0 1.5 2.0]
 #define CLOUD_SHADOWS
-#define CLOUD_SHADOW_STRENGTH 0.35 //[0.0 0.15 0.25 0.35 0.5 0.65 0.8]
+#define CLOUD_SHADOW_STRENGTH 0.0 //[0.0 0.15 0.25 0.35 0.5 0.65 0.8]
 #define CLOUD_SHADOW_HEIGHT 192.0 //[128.0 160.0 192.0 224.0 256.0 320.0]
 #define DIMENSION_VOLUMETRICS
 #define DIMENSION_FOG_STRENGTH 1.0 //[0.0 0.25 0.5 0.75 1.0 1.5 2.0]
-#define VOLUMETRIC_SAMPLES 8 //[0 4 8 12 16 32 64]
+#define VOLUMETRIC_SAMPLES 8 //[0 4 8 12 16 32 64 96 128]
+#define WATER_VOLUMETRIC_SAMPLES 64 //[0 4 8 12 16 32 64 96 128]
+//#define WATER_LIGHT_SHAFTS
 #define TWILIGHT_RAYS
 #define TWILIGHT_RAY_STRENGTH 1.0 //[0.0 0.25 0.5 0.75 1.0 1.5 2.0]
 #define VOLUMETRIC_STRENGTH 0.18 //[0.0 0.05 0.1 0.18 0.25 0.4]
@@ -77,7 +73,7 @@
 #define WATER_FOG_DENSITY 0.5 //[0.0 0.25 0.5 0.75 1.0 1.5 2.0]
 #define WATER_SCATTERING 0.8 //[0.0 0.25 0.4 0.6 0.8 1.0]
 #define WATER_ABSORPTION 0.08 //[0.0 0.02 0.04 0.08 0.12 0.2]
-#define WATER_CAUSTICS 3.0 //[0.0 0.15 0.3 0.6 1.0 1.5 2.0 3.0 4.0]
+#define WATER_CAUSTICS 6.0 //[0.0 0.15 0.3 0.6 1.0 1.5 2.0 3.0 4.0 5.0 6.0]
 #define CAUSTICS_PIXELS 16 //[8 16 32 64]
 // Keep symbolic format directives for Iris while defining valid GLSL values.
 const int RGBA16F = 34842;
@@ -125,11 +121,7 @@ const float shadowNearPlane = -2048.0;
 const float shadowFarPlane = 2048.0;
 const float SHADOW_DEPTH_BIAS_SCALE = 256.05 / (shadowFarPlane-shadowNearPlane);
 const float shadowIntervalSize  = 7.0;  //[1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0 16.0]
-#ifdef COLORED_BLOCK_LIGHTING
-const float shadowDistanceRenderMul = 64.0;
-#else
 const float shadowDistanceRenderMul = 1.0;
-#endif
 const float entityShadowDistanceMul = 1.0; //[0.125 0.2 0.25 0.333 0.5 0.75 1.0]
 const float sunPathRotation = 0.0; //[-90.0 -85.0 -80.0 -75.0 -70.0 -65.0 -60.0 -55.0 -50.0 -45.0 -40.0 -35.0 -30.0 -25.0 -20.0 -15.0 -10.0 -5.0 0.0 5.0 10.0 15.0 20.0 25.0 30.0 35.0 40.0 45.0 50.0 55.0 60.0 65.0 70.0 75.0 80.0 85.0 90.0]
 
@@ -243,3 +235,13 @@ float siftNightWeight(float time) {
  return smoothstep(11000.0,15000.0,time)*(1.0-smoothstep(22000.0,24000.0,time));
 }
 #endif
+
+
+
+#define BIOME_ATMOSPHERE
+#define BIOME_ATMOSPHERE_STRENGTH 0.65 //[0.0 0.25 0.5 0.65 0.75 1.0]
+
+#define WATER_CDOM 0.1 //[0.0 0.1 0.25 0.5 1.0 2.0 4.0 8.0 15.0]
+#define WATER_CHLOROPHYLL 0.1 //[0.0 0.1 0.25 0.5 1.0 2.0 5.0 10.0]
+#define WATER_SEDIMENT 0.25 //[0.0 0.25 0.5 1.0 5.0 10.0 30.0 100.0 300.0]
+#define WATER_BIOME_COLOR 0.2 //[0.0 0.1 0.2 0.35 0.5 0.75 1.0]

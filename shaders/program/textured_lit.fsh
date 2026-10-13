@@ -1,5 +1,4 @@
 #include "/shader.h"
-#include "/common/entity_emission_target.glsl"
 
 uniform float screenBrightness;
 uniform int entityId;
@@ -14,6 +13,7 @@ layout(r32ui) uniform uimage2D enchantedHeldImage;
 #endif
 #if (defined GBUFFERS_TERRAIN || defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT || defined GBUFFERS_HAND) && !defined MOD_COLORWHEEL
    flat varying float integratedId;
+   flat varying float cutCopperSurface;
    varying vec3 pbrNormal;
    varying vec4 pbrTangent;
    flat varying float pbrIsThin;
@@ -160,7 +160,7 @@ void main() {
       float rough = 1.0;
       float metal = 0.0;
       float emit = 0.0;
-      if (integratedId == 30001.0 || integratedId == 30002.0 || integratedId == 20013.0) {rough = 0.28;metal = 0.55*INTEGRATED_METALS;}
+      if (integratedId == 30001.0 || integratedId == 30002.0 || integratedId == 30005.0 || integratedId == 20013.0) {rough = 0.28;metal = 0.55*INTEGRATED_METALS;}
       if (integratedId == 20007.0 || integratedId == 20008.0 || integratedId == 42014.0 || integratedId == 10984.0) {rough = 0.28;metal = 0.55*INTEGRATED_METALS;}
       if ((integratedId >= 43101.0 && integratedId <= 43103.0) ||
           (integratedId >= 43111.0 && integratedId <= 43113.0)) {
@@ -185,8 +185,12 @@ void main() {
          float oxidation = integratedId-43120.0;
          rough = oxidation < 0.5 ? 0.28 : (oxidation < 1.5 ? 0.45 : (oxidation < 2.5 ? 0.65 : 0.85));
          metal = (oxidation < 0.5 ? 0.55 : (oxidation < 1.5 ? 0.35 : (oxidation < 2.5 ? 0.15 : 0.03)))*INTEGRATED_METALS;
-         // Bright yellow bulb windows glow; the copper housing remains metallic.
-         emit = smoothstep(0.45,0.75,bright)*smoothstep(0.08,0.25,min(albedo.r,albedo.g)-albedo.b)*1.5;
+         // Vanilla frame peaks at 227/255 red; panels start at 246/255.
+         // Require bright warm/cream texels, not merely copper-colored ones.
+         float bulbPanel = smoothstep(0.90,0.96,albedo.r)
+                         * smoothstep(0.60,0.65,albedo.g)
+                         * (1.0-smoothstep(0.01,0.06,albedo.g-albedo.r));
+         emit = bulbPanel*1.5;
       }
 
       #ifndef GBUFFERS_TERRAIN
@@ -211,9 +215,21 @@ void main() {
       if ((integratedId >= 42001.0 && integratedId <= 42014.0) || (integratedId >= 43111.0 && integratedId <= 43113.0)) emit = 1.0;
       float warmPixel = smoothstep(0.55,0.85,bright)*smoothstep(0.05,0.25,max(albedo.r,albedo.b)-albedo.g*0.7);
       if (integratedId == 30003.0) emit = smoothstep(0.55,0.9,bright);
+      // Match the previous texture-shaped glow, with a gentler froglight bloom.
+      if (integratedId >= 42009.0 && integratedId <= 42011.0) emit = 0.8*smoothstep(0.55,0.9,bright);
       if (integratedId == 10068.0 || integratedId == 10072.0 || integratedId == 10076.0) emit = 1.0;
       if (integratedId >= 10496.0 && integratedId <= 10984.0) emit = warmPixel;
-      if (integratedId == 42015.0) emit = 2.0;
+      // Copper torch flames are green, unlike the warm-source fallback.
+      if (integratedId == 10984.0)
+         emit = max(warmPixel,smoothstep(0.30,0.65,albedo.g)*smoothstep(0.035,0.15,albedo.g-max(albedo.r,albedo.b)));
+      // Soul flames include dark cyan embers below the warm-source cutoff.
+      // Cyan separation keeps the brown logs and neutral ash non-emissive.
+      if (integratedId == 10656.0)
+         emit = max(warmPixel,smoothstep(0.03,0.12,min(albedo.g,albedo.b)-albedo.r)*smoothstep(0.12,0.35,bright));
+      if (integratedId == 42015.0) {
+         float yellowLichen = smoothstep(0.025,0.09,min(albedo.r,albedo.g)-albedo.b);
+         emit = mix(1.4,2.0,yellowLichen);
+      }
       // Select saturated vein texels from the unlit texture, leaving dark bark intact.
       if (integratedId >= 43201.0 && integratedId <= 43215.0)
          emit = 1.5*(integratedId-43200.0)/15.0;
@@ -221,6 +237,67 @@ void main() {
          emit = smoothstep(0.32,0.55,albedo.r)*smoothstep(0.12,0.25,albedo.r-albedo.g);
       if (integratedId == 43002.0)
          emit = smoothstep(0.18,0.35,max(albedo.g,albedo.b))*smoothstep(0.07,0.16,min(albedo.g,albedo.b)-albedo.r);
+      // Texture-anchored oxidation patches remain stable as the camera moves.
+      float patchOxidation = 0.0;
+      if (integratedId >= 43101.0 && integratedId <= 43102.0) patchOxidation = integratedId-43100.0;
+      if (integratedId >= 43111.0 && integratedId <= 43112.0) patchOxidation = integratedId-43110.0;
+      if (integratedId >= 43121.0 && integratedId <= 43122.0) patchOxidation = integratedId-43120.0;
+      if (patchOxidation > 0.0) {
+         vec2 copperTexel = floor(texUV*vec2(textureSize(gtexture,0)));
+         float patchNoise = fract(sin(dot(copperTexel,vec2(12.9898,78.233)))*43758.5453);
+         float copperWarmth = clamp((albedo.r-albedo.g)*2.0+0.5,0.0,1.0);
+         // Exposed copper loses shine only on green patina; weathered stays noisy.
+         float greenPatina = smoothstep(0.015,0.08,albedo.g-albedo.r);
+         float metallicPatch = patchOxidation < 1.5 ? 1.0-greenPatina
+                              : step(0.72,patchNoise*0.7+copperWarmth*0.3);
+         rough = mix(1.0,patchOxidation < 1.5 ? 0.28 : 0.45,metallicPatch);
+         metal = metallicPatch*(patchOxidation < 1.5 ? 0.55 : 0.22)*INTEGRATED_METALS;
+      }
+      // Lamp panels are rough luminous material, not reflective copper.
+      // Apply after oxidation coverage so exposed panels cannot regain metal.
+      if (integratedId >= 43120.0 && integratedId <= 43123.0) {
+         float neutralCore = smoothstep(0.94,0.99,bright)
+                           * (1.0-smoothstep(0.10,0.22,bright-min(albedo.r,min(albedo.g,albedo.b))));
+         float panelCoverage = max(smoothstep(0.02,0.20,emit),neutralCore);
+         emit = max(emit,neutralCore*1.5);
+         metal *= 1.0-panelCoverage;
+         rough = mix(rough,1.0,panelCoverage);
+      }
+      // Cut-copper seams use the darker texels of the internal texture.
+      // Keep patina roughness; widen only the dividing-strip highlights.
+      if (cutCopperSurface>0.5) {
+         float strip = 1.0-smoothstep(0.61,0.68,bright);
+         rough = max(rough,mix(rough,0.82,strip));
+      }
+      if (integratedId == 43601.0)
+         emit = 1.5*smoothstep(0.35,0.65,albedo.r)*smoothstep(0.12,0.30,albedo.r-albedo.b);
+      if (integratedId == 43602.0) {
+         float neutralRail=1.0-smoothstep(0.06,0.18,bright-min(albedo.r,min(albedo.g,albedo.b)));
+         float goldRail=smoothstep(0.68,0.82,albedo.g/max(albedo.r,0.001))*smoothstep(0.10,0.25,albedo.g-albedo.b);
+         float railMetal=max(neutralRail,goldRail);
+         rough=mix(1.0,0.36,railMetal);
+         metal=railMetal*0.40*INTEGRATED_METALS;
+      }
+      if (integratedId == 40009.0) {
+         float cartMetal=1.0-smoothstep(0.06,0.18,bright-min(albedo.r,min(albedo.g,albedo.b)));
+         rough=mix(1.0,0.42,cartMetal);
+         metal=cartMetal*0.25*INTEGRATED_METALS;
+      }
+      // Only colored lamp-interior texels emit; metal hardware stays shaded.
+      if (integratedId == 42003.0)
+         emit = smoothstep(0.60,0.80,albedo.r)*smoothstep(0.12,0.30,albedo.r-albedo.b);
+      if (integratedId == 42001.0)
+         emit = smoothstep(0.30,0.65,max(albedo.g,albedo.b))*smoothstep(0.05,0.18,min(albedo.g,albedo.b)-albedo.r);
+      if (integratedId == 42014.0 || (integratedId >= 43111.0 && integratedId <= 43113.0))
+      {
+         float greenInterior=smoothstep(0.50,0.80,albedo.g)*smoothstep(0.025,0.12,albedo.g-max(albedo.r,albedo.b));
+         float paleInterior=smoothstep(0.78,0.91,min(albedo.r,min(albedo.g,albedo.b)));
+         emit=max(greenInterior,paleInterior);
+         // Light panels are luminous glass, not reflective copper.
+         float interior=smoothstep(0.05,0.30,emit);
+         metal*=1.0-interior;
+         rough=mix(rough,1.0,interior);
+      }
       emit *= INTEGRATED_EMISSION;
       vec4 specSample = vec4(1.0-sqrt(rough),mix(0.04,230.0/255.0,metal),0.0,min(emit,0.99)*254.0/255.0);
 #endif
@@ -258,13 +335,15 @@ void main() {
 #endif
       if (!hasPackSpecular) {
       if (integratedId >= 30020.0 && integratedId <= 30022.0) pbrEmission = max(pbrEmission,PORTAL_EMISSION);
-      if (integratedId == 42015.0) pbrEmission = max(pbrEmission,2.0*INTEGRATED_EMISSION);
+      #if MATERIAL_MODE == 0
+      if (integratedId == 42015.0 && !hasPackSpecular) pbrEmission = emit;
+#endif
       }
       // Powered dust retains its requested glow even if a pack supplies
       // only roughness/metal maps. Stronger pack emission still wins.
       bool poweredDust = integratedId >= 43201.0 && integratedId <= 43215.0;
       if (poweredDust)
-         pbrEmission=max(pbrEmission,1.5*(integratedId-43200.0)/15.0*INTEGRATED_EMISSION);
+         pbrEmission=3.0*pow((integratedId-43200.0)/15.0,5.0)*INTEGRATED_EMISSION;
       float circuitGlow=0.0;
       if (integratedId >= 43301.0 && integratedId <= 43303.0) {
          // Lit red torch tips and traces, excluding gray stone and brown stems.
@@ -280,6 +359,10 @@ void main() {
       // Warm blaze body and rods glow; dark facial pixels retain their contrast.
       if (!hasPackSpecular && integratedId == 40002.0)
          pbrEmission = smoothstep(0.20,0.55,albedo.r)*smoothstep(0.06,0.20,albedo.r-albedo.b)*INTEGRATED_EMISSION;
+#endif
+#if MATERIAL_MODE == 0
+      if (!hasPackSpecular && integratedId == 40008.0)
+         pbrEmission = 1.5*smoothstep(0.60,0.85,albedo.r)*smoothstep(0.20,0.40,albedo.r-albedo.b)*INTEGRATED_EMISSION;
 #endif
       float pbrMetal = step(229.5/255.0, specSample.g) * (1.0 - pbrIsThin) * LABPBR_METAL_FACTOR;
       float pbrRoughness = clamp(pow(1.0 - specSample.r, 2.0) * LABPBR_ROUGHNESS_SCALE, 0.04, 1.0);
@@ -297,6 +380,14 @@ void main() {
       pbrRoughness = sqrt(min(1.0, pbrRoughness*pbrRoughness + variance));
       }
       bool pbrHasSpecular = pbrIsThin < 0.5 && ((MATERIAL_MODE == 1 || hasPackSpecular) ? dot(specSample.rgb, specSample.rgb) > 0.0 : specSample.r > 0.001);
+      float pbrSpecularStrength = LABPBR_SPECULAR_STRENGTH;
+      float integratedReflectionCap = 1.0;
+#if MATERIAL_MODE == 0 && defined GBUFFERS_TERRAIN
+      if (!hasPackSpecular) {
+         pbrSpecularStrength = min(max(pbrSpecularStrength,0.0),0.25);
+         integratedReflectionCap = 0.25;
+      }
+#endif
       vec3 pbrBase = pow(max(albedo.rgb * color.rgb, vec3(0.0)), vec3(2.2));
       float dielectricF0 = specSample.g >= 229.5/255.0 ? 0.04 : specSample.g;
 #if MATERIAL_MODE == 0
@@ -306,7 +397,7 @@ void main() {
 #if MATERIAL_MODE == 0
       if (!hasPackSpecular && (integratedId == 30001.0 || integratedId == 20013.0 ||
                               integratedId == 40001.0 || integratedId == 41001.0)) {
-         // Iron reflectance must not inherit texture darkness or baked shading.
+         // Internal iron reflectance uses unshaded texture color.
          pbrF0 = mix(vec3(dielectricF0),clamp(pow(max(albedo.rgb,vec3(0.0)),vec3(2.2))*1.5,vec3(0.08),vec3(0.58)),pbrMetal);
       }
 #endif
@@ -314,11 +405,16 @@ void main() {
 #if MATERIAL_MODE == 0
       if (!hasPackSpecular && (integratedId == 20007.0 || integratedId == 20008.0 ||
                               integratedId == 42014.0 || integratedId == 10984.0 || integratedId == 43003.0 || (integratedId >= 43101.0 && integratedId <= 43103.0) || (integratedId >= 43111.0 && integratedId <= 43113.0) || (integratedId >= 43120.0 && integratedId <= 43123.0))) {
-         // Unshaded texture color preserves oxidation hue and surface detail.
+         // Internal copper uses texture-based reflectance; patina controls coverage.
          // Partial integrated metal coverage keeps the underlying texture readable.
          vec3 copperReflectance = clamp(pow(max(albedo.rgb,vec3(0.0)),vec3(2.2))*2.0,vec3(0.015),vec3(0.85));
          pbrF0 = mix(vec3(dielectricF0),copperReflectance,pbrMetal);
       }
+#endif
+
+#if MATERIAL_MODE == 0
+      if (!hasPackSpecular && (integratedId == 30002.0 || integratedId == 41002.0 || integratedId == 41005.0))
+         pbrF0 = mix(vec3(dielectricF0),pbrBase,pbrMetal);
 #endif
 
       ambientOcclusion *= mix(1.0, normalSample.b, LABPBR_AO_STRENGTH);
@@ -368,13 +464,8 @@ void main() {
       blockLightNormal = normalize(pbrNormal);
    #endif
 
-   #if defined TERRAIN_LABPBR && defined LABPBR_BLOCK_LIGHTING
-      // Use the selected block-light system once as local isotropic irradiance.
-      // Colored lighting supplies voxel radiance instead of lightmap intensity.
-      vec3 pbrBlockIrradiance = pow(max(getTorchColor(lightUV.s, vec3(0.0), feetPos, blockLightNormal), vec3(0.0)), vec3(2.2));
-   #else
-      ambient.rgb += getTorchColor(lightUV.s, ambient.rgb, feetPos, blockLightNormal);
-   #endif
+ambient.rgb += getTorchColor(lightUV.s, ambient.rgb, feetPos, blockLightNormal);
+
 
    #ifndef TERRAIN_LABPBR
       albedo.rgb *= ambientOcclusion;
@@ -400,7 +491,7 @@ void main() {
          environment = labSkyEnvironment(reflect(-V, N), pbrRoughness, skyColor, fogColor)
                      * smoothstep(0.3, 0.95, lightUV.t);
       #endif
-      lit += environment * fresnel * (1.0 - 0.5*pbrRoughness) * ambientOcclusion;
+      lit += environment * fresnel * (1.0 - 0.5*pbrRoughness) * ambientOcclusion * integratedReflectionCap;
       #if defined ENABLE_SHADOWS || (defined GBUFFERS_HAND && defined OVERWORLD)
          #ifdef ENABLE_SHADOWS
          vec3 L = normalize(view2eye(shadowLightPosition));
@@ -417,17 +508,11 @@ void main() {
               #ifdef ENABLE_SHADOWS
               * getGlassShadowTint(feetPos)
               #endif
-              * max(visibility, 0.0) * daylight * (1.0 - rainStrength) * LABPBR_SPECULAR_STRENGTH
+              * max(visibility, 0.0) * daylight * (1.0 - rainStrength) * pbrSpecularStrength
               * float(pbrHasSpecular);
       #endif
       }
-      #ifdef LABPBR_BLOCK_LIGHTING
-         // Apply local lighting after the sky/shadow palette so bright skylight
-         // cannot suppress it. Metals receive reflected light, not diffuse light.
-         lit += pbrBlockIrradiance * ambientOcclusion
-              * (pbrBase * (1.0 - pbrMetal) * (vec3(1.0) - fresnel)
-                 + fresnel * (1.0 - 0.5 * pbrRoughness));
-      #endif
+
 #if MATERIAL_MODE == 0
       // Integrated emission keeps its strength independent of labPBR controls.
       if (!hasPackSpecular && (integratedId == 43001.0 || integratedId == 43002.0 || (integratedId >= 43201.0 && integratedId <= 43215.0) || (integratedId >= 43120.0 && integratedId <= 43123.0))) {
@@ -444,7 +529,7 @@ void main() {
       if (poweredDust || circuitGlow>0.001) {
          // Thin, vertex-tinted dust needs HDR radiance to show red bloom.
          float dustPeak=max(pbrBase.r,max(pbrBase.g,pbrBase.b));
-         lit+=pbrBase/max(dustPeak,0.025)*pbrEmission*0.9;
+         lit+=pbrBase/max(dustPeak,0.001)*pbrEmission*(poweredDust ? 1.5 : 0.9);
       }
       #if COLOR_GRADING == 1
          // Preserve HDR lighting until the final exposure/tone mapping pass.
@@ -474,15 +559,8 @@ void main() {
    // Keep the texture and vertex alpha; the native render type selects blending.
    if(albedo.a<0.01) discard;
 #endif
-   /* DRAWBUFFERS:0675218 */
+   /* DRAWBUFFERS:067521 */
    gl_FragData[0] = albedo;
-   gl_FragData[6] = vec4(0.0);
-#if defined ENTITY_DYNAMIC_LIGHTING && defined TERRAIN_LABPBR && (defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT) && !defined LAMB_DYNAMIC_LIGHTS
-   if(resourceEntityFullbright && albedo.a>0.01)
-      gl_FragData[6]=vec4(resourceEntityEmission,1.0);
-   else if ((hasPackSpecular || (MATERIAL_MODE == 0 && integratedId == 40002.0)) && pbrEmission>0.001 && albedo.a>0.1)
-      gl_FragData[6] = vec4(pbrBase*pbrEmission*LABPBR_EMISSION_STRENGTH,1.0);
-#endif
 
 
    gl_FragData[3] = vec4(0.0);
@@ -501,7 +579,7 @@ void main() {
       gl_FragData[1] = vec4(N * 0.5 + 0.5, 1.0);
       #if BLOCK_REFLECTIONS > 0
          float reflectionWeight = (1.0 - fogMix) * pow(1.0 - pbrRoughness, 4.0)
-                                * min(1.0, LABPBR_SPECULAR_STRENGTH) * float(pbrHasSpecular);
+                                * min(1.0, pbrSpecularStrength) * float(pbrHasSpecular);
       #else
          float reflectionWeight = 0.0;
       #endif
@@ -517,3 +595,6 @@ void main() {
       gl_FragData[2] = vec4(vec3(0.0), 1.0);
    #endif
 }
+
+
+

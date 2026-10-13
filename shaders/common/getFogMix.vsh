@@ -1,3 +1,4 @@
+#include "/common/dry_biome_fog.glsl"
 uniform float fogEnd, fogStart;
 #if defined THE_NETHER || defined THE_END || defined THE_SIFT
 uniform float blindness, darknessFactor;
@@ -13,6 +14,13 @@ uniform float far;
 
 float calcFogMix(vec3 feetPos, float fogStartMult, float rangeFar) {
    float len = length(feetPos);
+   float dustFog = 0.0;
+#ifdef OVERWORLD
+   if (isEyeInWater == 0) dustFog = min(0.97,1.0-exp(-max(len-3.0,0.0)/18.0))*clamp(vvDryBiomeDust,0.0,1.0);
+#endif
+   #ifdef OVERWORLD
+   if (isEyeInWater == 0) dustFog=max(dustFog,min(0.98,1.0-exp(-max(len-2.0,0.0)/12.0))*clamp(vvPaleGarden,0.0,1.0));
+   #endif
    float cylinderLen = max(length(feetPos.xz), abs(feetPos.y));
    float density = FOG_DENSITY;
    #if COLOR_GRADING == 1 && defined HEIGHT_FOG && defined OVERWORLD && !defined GBUFFERS_SKYBASIC
@@ -26,11 +34,11 @@ float calcFogMix(vec3 feetPos, float fogStartMult, float rangeFar) {
    if (rangeFar > far) {
       float atmosphere = min(0.97, 1.0 - exp(-0.8 * density * max(0.0, len - start) / max(far, 1.0)));
       float horizon = rescale(cylinderLen, 0.9 * rangeFar, rangeFar);
-      return max(atmosphere, horizon);
+      return max(max(atmosphere, horizon),dustFog);
    }
    float distanceFog = rescale(cylinderLen, start, max(start + 1.0, rangeFar));
    float atmosphere = 1.0 - pow(max(1.0 - distanceFog, 0.0), density);
-   return atmosphere;
+   return max(atmosphere,dustFog);
 }
 
 float getFogMix(vec3 feetPos) {

@@ -9,7 +9,7 @@ screen.WATER_SCREEN=Water
 option.WATER_BRIGHTNESS=Water brightness
 option.WATER_B=Water blueness
 option.WATER_A=Water opacity
-option.WATER_MIN_GLINT=Water glint strength §e[?]
+option.WATER_MIN_GLINT=Water glint strength Â§e[?]
 option.WATER_MIN_GLINT.comment=Determines how much texture the water retains; moving water still keeps all texture
 option.WATER_GLINT_BRIGHTNESS=Water glint brightness
 option.WATER_GLINT_CUTOFF=Water glint cutoff
@@ -17,25 +17,25 @@ option.WATER_WAVE_SIZE=Wave size
 option.WATER_WAVE_SPEED=Wave speed
 
 screen.COLORS_SCREEN=Colors
-option.TORCH_INNER_R=Inner torch §cR
-option.TORCH_INNER_G=Inner torch §2G
-option.TORCH_INNER_B=Inner torch §9B
-option.TORCH_MIDDLE_R=Middle torch §cR
-option.TORCH_MIDDLE_G=Middle torch §2G
-option.TORCH_MIDDLE_B=Middle torch §9B
-option.TORCH_OUTER_R=Outer torch §cR
-option.TORCH_OUTER_G=Outer torch §2G
-option.TORCH_OUTER_B=Outer torch §9B
-option.MOON_R=Moon §cR
-option.MOON_G=Moon §2G
-option.MOON_B=Moon §9B
+option.TORCH_INNER_R=Inner torch Â§cR
+option.TORCH_INNER_G=Inner torch Â§2G
+option.TORCH_INNER_B=Inner torch Â§9B
+option.TORCH_MIDDLE_R=Middle torch Â§cR
+option.TORCH_MIDDLE_G=Middle torch Â§2G
+option.TORCH_MIDDLE_B=Middle torch Â§9B
+option.TORCH_OUTER_R=Outer torch Â§cR
+option.TORCH_OUTER_G=Outer torch Â§2G
+option.TORCH_OUTER_B=Outer torch Â§9B
+option.MOON_R=Moon Â§cR
+option.MOON_G=Moon Â§2G
+option.MOON_B=Moon Â§9B
 
 screen.ATMOSPHERE_SCREEN=Atmosphere
 option.ENABLE_FOG=Enable fog
 option.WEATHER_OPACITY=Weather Opacity
-option.ENABLE_SKY=Enable sky §e[?]
+option.ENABLE_SKY=Enable sky Â§e[?]
 option.ENABLE_SKY.comment=Disable this option if you are using a sky resource pack
-option.OVERWORLD_FOG_MAX_SLIDER=Overworld transition fog §e[?]
+option.OVERWORLD_FOG_MAX_SLIDER=Overworld transition fog Â§e[?]
 option.OVERWORLD_FOG_MAX_SLIDER.comment=Fog intensity during sunsets and sunrises
 option.OVERWORLD_FOG_MIN_SLIDER=Overworld fog
 option.END_STARS_SPEED=End stars speed
@@ -46,40 +46,40 @@ screen.SHADOWS_SCREEN=Shadows
 option.SHADOW_BLUENESS=Shadow blueness
 option.shadowDistance=Shadow distance
 option.shadowMapResolution=Shadow resolution
-option.shadowIntervalSize=Shadow refocus rate §e[?]
+option.shadowIntervalSize=Shadow refocus rate Â§e[?]
 option.shadowIntervalSize.comment=Determines after how many blocks shadows refocus on the player
-option.entityShadowDistanceMul=Entity shadow distance §e[?]
+option.entityShadowDistanceMul=Entity shadow distance Â§e[?]
 option.entityShadowDistanceMul.comment=As a percentage of shadow distance
 option.SHADOW_PIXEL=Shadow pixelization
 option.LIGHT_BRIGHTNESS=Sun brightness
-option.sunPathRotation=Sun path angle §e[!]
+option.sunPathRotation=Sun path angle Â§e[!]
 option.sunPathRotation.comment=Miniature was designed with straight shadows in mind and may produce artifacts if changed
 option.SHADOW_DARKNESS=Shadow darkness
-option.FLAT_LIGHTING=Use flat lighting §e[?]
+option.FLAT_LIGHTING=Use flat lighting Â§e[?]
 option.FLAT_LIGHTING.comment=Without flat lighting, blocks will have shadows that do not match the sun's position, like in vanilla
 option.ENABLE_SHADOWS=Enable shadows
 option.SHADOW_ENTITY=Entity shadows
-value.SHADOW_ENTITY.-1=§aOff
-value.SHADOW_ENTITY.0=§ePlayer
-value.SHADOW_ENTITY.1=§eAll
+value.SHADOW_ENTITY.-1=Â§aOff
+value.SHADOW_ENTITY.0=Â§ePlayer
+value.SHADOW_ENTITY.1=Â§eAll
 
 screen.REFLECTIONS_SCREEN=Reflections
 option.REFLECTIONS=Reflection opacity
-option.BLOCK_REFLECTIONS=Block reflection opacity §e[?]
+option.BLOCK_REFLECTIONS=Block reflection opacity Â§e[?]
 option.BLOCK_REFLECTIONS.comment=Adds reflections to blocks such as stone bricks, quartz, etc.
 option.SSR_MAX_STEPS=Maximum steps
 option.SSR_BINARY_STEPS=Maximum refining steps
 option.SSR_STEP_SIZE=Step size
 
 screen.OTHER_SCREEN=Other
-option.HIGHLIGHT_WAXED=Highlight waxed blocks §e[?]
+option.HIGHLIGHT_WAXED=Highlight waxed blocks Â§e[?]
 option.HIGHLIGHT_WAXED.comment=Holding a honeycomb highlights waxed blocks
 option.GLOWING_ORES=Glowing ores
 option.NETHER_COLOR_GRADING=Nether color grading
 option.HAND_DYNAMIC_LIGHTING=Hand dynamic lighting
-value.HAND_DYNAMIC_LIGHTING.-1=§aOff
-value.HAND_DYNAMIC_LIGHTING.0=§eWith light
-value.HAND_DYNAMIC_LIGHTING.1=§eAlways
+value.HAND_DYNAMIC_LIGHTING.-1=Â§aOff
+value.HAND_DYNAMIC_LIGHTING.0=Â§eWith light
+value.HAND_DYNAMIC_LIGHTING.1=Â§eAlways
 option.LABPBR=labPBR 1.3 resource pack materials
 option.LABPBR.comment=Enable terrain normal maps, smoothness, reflectance, metals, material AO and emission. Requires a labPBR 1.3 resource pack.
 
@@ -99,8 +99,6 @@ option.LABPBR_AO_STRENGTH.comment=Controls occlusion from the normal map blue ch
 option.LABPBR_EMISSION_STRENGTH=Emission Brightness
 option.LABPBR_EMISSION_STRENGTH.comment=Controls emissive texture brightness. Zero disables texture emission. Emissive surfaces do not cast light onto nearby blocks.
 
-option.LABPBR_BLOCK_LIGHTING=Enhanced Material Block Lighting
-option.LABPBR_BLOCK_LIGHTING.comment=Enhances material response to block and held light in both modes. Enabled by High; lightmap-based, without directional block-light shadows.
 
 option.EXPOSURE=Exposure
 
@@ -229,10 +227,6 @@ option.GLASS_REFLECTION_STRENGTH=Glass Reflections
 option.GLASS_REFLECTION_STRENGTH.comment=Reflection strength for clear and stained glass blocks/panes. Preserves texture alpha; Fresnel keeps face-on views transparent.
 
 profile.ULTRA=Ultra
-option.COLORED_BLOCK_LIGHTING=Colored Block Lighting
-option.COLORED_BLOCK_LIGHTING.comment=Replaces vanilla block illumination with voxel source color and brightness. Enabled by Ultra. Sunlight and ambient lighting remain independent.
-option.COLORED_LIGHT_STRENGTH=Colored Light Strength
-option.COLORED_LIGHT_STRENGTH.comment=Scales voxel block illumination. Zero removes static block lighting while this feature is enabled.
 
 option.COLORED_GLASS_SHADOWS=Colored Glass Shadows
 option.WATER_SCENE_REFLECTIONS=Water Scene Reflections
@@ -253,10 +247,6 @@ option.TWILIGHT_RAYS.comment=Warm shadow-shaped sun shafts near the horizon. Req
 option.TWILIGHT_RAY_STRENGTH=Twilight Ray Strength
 
 
-option.BLOCK_LIGHT_HORIZONTAL_RADIUS=Block Light Horizontal Radius
-option.BLOCK_LIGHT_VERTICAL_RADIUS=Block Light Vertical Radius
-option.BLOCK_LIGHT_HORIZONTAL_RADIUS.comment=Detailed voxel grid radius in blocks along X and Z. Higher values increase GPU cost and memory. Blends to distant grids inside the boundary.
-option.BLOCK_LIGHT_VERTICAL_RADIUS.comment=Detailed voxel grid radius in blocks above and below the player. Higher values increase GPU cost and memory.
 
 screen.PACK_COMPATIBILITY_SCREEN=Texture Pack Compatibility
 option.PACK_OUTLINE_MARKERS=Enchantment Outline Alpha Markers
@@ -264,8 +254,26 @@ option.PACK_OUTLINE_MARKERS.comment=Support unlit item texels with alpha 200, 25
 option.PACK_FULLBRIGHT_ENTITIES=Fullbright Entity Overlays
 option.PACK_FULLBRIGHT_ENTITIES.comment=Honor fullbright entity draws used by ETF emissive overlays. Disable if a mod draws ordinary entity layers with fullbright lighting.
 
-option.ENTITY_DYNAMIC_LIGHTING=Entity Emission Lighting
-option.ENTITY_DYNAMIC_LIGHTING.comment=Lets emissive mobs light nearby blocks. Enabled by default on Ultra. Turning this off keeps their texture glow but removes their cast light.
 
 option.LAMB_DYNAMIC_LIGHTS=LambDynamicLights Compatibility
-option.LAMB_DYNAMIC_LIGHTS.comment=Use the mod lightmap for dynamic lighting. Disables shader held-item and entity cast lights to prevent duplication. Keeps emissive textures and colored static block lights. Enable only when LambDynamicLights is installed.
+option.LAMB_DYNAMIC_LIGHTS.comment=Use the mod lightmap for dynamic lighting. Disables shader held-item lights to prevent duplication. Keeps emissive textures and colored static block lights. Enable only when LambDynamicLights is installed.
+
+
+
+option.BIOME_ATMOSPHERE=Biome Atmosphere
+option.BIOME_ATMOSPHERE.comment=Subtle biome sky and fog palettes with smooth transitions. Preserves native brightness and weather; resource-pack and mod colors are blended. DH cloud colors are controlled by DH.
+option.BIOME_ATMOSPHERE_STRENGTH=Biome Atmosphere Strength
+
+option.WATER_CDOM=Water CDOM Concentration
+option.WATER_CDOM.comment=Organic matter absorption: more produces yellow/brown water. RGB approximation; not an exact Bedrock renderer.
+option.WATER_CHLOROPHYLL=Water Chlorophyll Concentration
+option.WATER_CHLOROPHYLL.comment=More produces greener water by absorbing red and blue light.
+option.WATER_SEDIMENT=Water Suspended Sediment
+option.WATER_SEDIMENT.comment=More produces murkier red/brown water.
+option.WATER_BIOME_COLOR=Biome Water Color Contribution
+
+option.WATER_VOLUMETRIC_SAMPLES=Water Volumetric Quality
+option.WATER_VOLUMETRIC_SAMPLES.comment=Samples for water fog and sunlight shafts, independent of atmospheric volumetrics. Zero uses uniform water fog without shafts. Maximum 128.
+
+option.WATER_LIGHT_SHAFTS=Water Light Shafts
+option.WATER_LIGHT_SHAFTS.comment=Underwater sunlight shafts. Enabled by the Ultra preset; disabled by other presets.
