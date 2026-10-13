@@ -11,6 +11,10 @@ uniform sampler2D colortex3;
 uniform sampler2D colortex6;
 uniform sampler2D colortex7;
 uniform sampler2D colortex5;
+uniform sampler2D waterWaveTex;
+uniform sampler2D colortex8;
+uniform sampler2D colortex9;
+
 #include "/common/labpbr.glsl"
 uniform sampler2D depthtex0;
 uniform sampler2D depthtex1;
@@ -26,7 +30,7 @@ varying vec2 texUV;
 #include "/common/transformations.glsl"
 #include "/common/getReflectionColor.fsh"
 #include "/common/vibrant.glsl"
-#include "/common/entity_light_resolve.glsl"
+#include "/common/held_light_depth.glsl"
 
 vec3 waterEntryPosition(vec2 uv,float depth) {
    if (depth < 1.0) return screen2view(uv,depth);
@@ -46,6 +50,16 @@ vec3 waterCelestialHighlight(vec3 surface,float nativeDepth) {
 #ifdef OVERWORLD
          vec3 waterNormal = screen2ndc(texture2D(colortex6,texUV).xyz);
          vec3 N = normalize(eye2view(waterNormal));
+         if (isEyeInWater == 0 && abs(waterNormal.y)>0.9) {
+            ivec2 atlasSize=textureSize(waterWaveTex,0);
+            int frameCount=max(atlasSize.y/atlasSize.x,1);
+            int frame=int(mod(floor(frameTimeCounter*10.0),float(frameCount)));
+            vec2 surfaceWorld=(view2feet(surface)+cameraPosition).xz;
+            ivec2 pixel=ivec2(floor(fract(surfaceWorld)*float(atlasSize.x)));
+            pixel.y+=frame*atlasSize.x;
+            vec3 wave=texelFetch(waterWaveTex,pixel,0).rgb*2.0-1.0;
+            N=normalize(eye2view(vec3(wave.x*2.5,wave.z,-wave.y*2.5)));
+         }
 
          vec3 V = normalize(-surface);
          vec3 L = normalize(sunPosition);
@@ -77,6 +91,40 @@ vec3 waterCelestialHighlight(vec3 surface,float nativeDepth) {
 #endif
 }
 
+// Trace only the opaque scene below the water plane; surface/sky hits are invalid.
+vec4 underwaterSceneReflection(vec3 surface,vec3 waveNormal) {
+   vec3 ray=normalize(reflect(normalize(surface),waveNormal));
+   if (ray.z>=-0.005) return vec4(0.0);
+   float surfaceY=view2feet(surface).y;
+   vec3 previous=surface;
+   float travel=0.2;
+   for (int i=0;i<SSR_MAX_STEPS;i++) {
+      vec3 point=surface+ray*travel;
+      vec2 uv=view2screen(point).xy;
+      if (any(lessThan(uv,vec2(0.0))) || any(greaterThan(uv,vec2(1.0)))) break;
+      float sceneZ=reflectionSceneZ(uv,true);
+      if (point.z<sceneZ && sceneZ>-1.0e19) {
+         vec3 a=previous;
+         vec3 b=point;
+         for (int j=0;j<SSR_BINARY_STEPS;j++) {
+            point=(a+b)*0.5;
+            uv=view2screen(point).xy;
+            sceneZ=reflectionSceneZ(uv,true);
+            if (point.z>sceneZ) a=point; else b=point;
+         }
+         float error=abs(point.z-sceneZ);
+         if (error>0.4 || view2feet(point).y>=surfaceY-0.1) return vec4(0.0);
+         vec3 receiver=max(texture2D(colortex1,uv).rgb,vec3(0.0));
+         // colortex0 at this UV contains the water surface, not the reflected bed.
+         vec3 reflected=receiver*mix(0.18,0.65,clamp(float(eyeBrightnessSmooth.y)/240.0,0.0,1.0));
+         reflected*=exp(-waterTintExtinction(fogColor)*length(point-surface)*0.5);
+         return vec4(pow(max(reflected,vec3(0.0)),vec3(1.0/2.2)),getReflectionVignette(uv));
+      }
+      previous=point;
+      travel+=max(0.25,abs(point.z-sceneZ)*0.12);
+   }
+   return vec4(0.0);
+}
 void main() {
    vec4 color = texture2D(colortex0, texUV);
    vec4 reflectivityAndRoughness = texture2D(colortex7, texUV);
@@ -84,6 +132,8 @@ void main() {
    float roughness = reflectivityAndRoughness.y;
    vec3 waterReflection = vec3(0.0);
    float waterReflectionWeight = 0.0;
+   vec2 waterBloomUV = texUV;
+   float waterBloomTransmission = 0.0;
 
    bool hasRenderedSurface = reflectivityAndRoughness.a > 0.5;
    bool depthlessOverlay = hasRenderedSurface && texture2D(depthtex0,texUV).x >= 1.0;
@@ -105,6 +155,17 @@ void main() {
       }
    }
 #endif
+   if (isWater && isEyeInWater == 1) {
+      // Waterlogged partial blocks expose internal fluid side faces. These do
+      // not form the overhead water/air interface and must not refract the scene.
+      vec3 interfaceNormal=screen2ndc(texture2D(colortex6,texUV).xyz);
+      vec3 interfaceRay=normalize(view2eye(waterEntryPosition(texUV,texture2D(depthtex0,texUV).x)));
+      bool overheadBoundary=abs(interfaceNormal.y)>0.9 && interfaceRay.y>0.001;
+      float frontDepth=texture2D(depthtex0,texUV).x;
+      float solidDepth=texture2D(depthtex1,texUV).x;
+      bool solidReceiver=solidDepth<1.0 && frontDepth>=solidDepth-0.000001;
+      if (!overheadBoundary || solidReceiver) isWater=false;
+   }
    if (isWater) roughness = 0.0; // Water metadata Y holds animated texture detail.
    bool isGlass = abs(reflectivityAndRoughness.z - 0.6) < 0.01;
    if (isGlass) reflectivity = GLASS_REFLECTION_STRENGTH;
@@ -126,17 +187,93 @@ void main() {
       float stepSize = stepify(mix(1.0/512.0, 1.0/64.0, pixelDistance), 1.0/512.0);
 
       // Keep the original stochastic reflections only on the legacy material path.
-      if (!isPbr) normal += roughness * random3(stepify(worldPos, stepSize));
+      if (!isPbr && !isWater) normal += roughness * random3(stepify(worldPos, stepSize));
       normal = normalize(normal);
-
+      if (isWater) {
+         // Mojang water_still_grey_normal: 16x16, 32 frames, two game ticks/frame.
+         // Sample one tile per block without synthetic scrolling or extra waves.
+         ivec2 waveSize=textureSize(waterWaveTex,0);
+         int frameCount=max(waveSize.y/waveSize.x,1);
+         int waveFrame=int(mod(floor(frameTimeCounter*10.0),float(frameCount)));
+         ivec2 wavePixel=ivec2(floor(fract(worldPos.xz)*float(waveSize.x)));
+         wavePixel.y+=waveFrame*waveSize.x;
+         vec3 waveNormal=texelFetch(waterWaveTex,wavePixel,0).rgb*2.0-1.0;
+         if (isEyeInWater == 0) waveNormal.xy*=2.5; // Stronger top-surface ripples.
+         if (abs(prenormal.y)>0.9)
+            normal=normalize(eye2view(vec3(waveNormal.x,waveNormal.z,-waveNormal.y)));
+      }
+      if (isWater && isEyeInWater == 1) {
+         // Project the refracted direction, not a point displaced from the surface.
+         // A finite offset adds a second, depth-dependent sky window.
+         vec3 incident=normalize(viewPos);
+         vec3 interfaceNormal=dot(normal,incident)>0.0 ? -normal : normal;
+         vec3 coneNormal=interfaceNormal; // The original texture defines the entire interface.
+         vec3 airRay=refract(incident,coneNormal,1.333);
+         if (dot(airRay,airRay)>0.00001) {
+            vec3 transmitted=color.rgb;
+#if defined OVERWORLD || defined THE_SIFT
+            // Directional sky fills transmission even when its source is off-screen.
+            transmitted=pow(max(labSkyEnvironment(view2eye(airRay),0.05,
+               vvBiomeAtmosphereColor(skyColor,1.0),vvBiomeAtmosphereColor(fogColor,0.0)),vec3(0.0)),vec3(1.0/2.2));
+#endif
+            if (airRay.z < -0.001) {
+               vec2 projectedUV=view2screen(airRay*1024.0).xy;
+               // Enlarge the clean upper scene to cover the entire viewing cone.
+               // Bounded mapping keeps critical-angle rays inside the captured frame.
+               vec2 projectedOffset=(projectedUV-0.5)*2.0;
+               vec2 boundedOffset=projectedOffset/sqrt(vec2(1.0)+projectedOffset*projectedOffset);
+               vec2 refractedUV=vec2(0.5,0.64)+boundedOffset*vec2(0.30,0.24);
+               if (all(greaterThan(refractedUV,vec2(0.0))) && all(lessThan(refractedUV,vec2(1.0)))) {
+                  float edgeFade=smoothstep(0.0,0.025,min(min(refractedUV.x,refractedUV.y),min(1.0-refractedUV.x,1.0-refractedUV.y)));
+                  // Iris solid hand precedes deferred; preserve its depth for rejection.
+                  float capturedDepth=texture2D(colortex9,refractedUV).x;
+                  if (capturedDepth<0.56) {
+                     // Reuse nearby captured clouds rather than expose a hand-shaped sky patch.
+                     for (int sampleIndex=1;sampleIndex<=8;sampleIndex++) {
+                        vec2 candidate=vec2(refractedUV.x,min(0.98,refractedUV.y+float(sampleIndex)*0.04));
+                        if (texture2D(colortex9,candidate).x>=0.56) {
+                           refractedUV=candidate;
+                           capturedDepth=texture2D(colortex9,candidate).x;
+                           break;
+                        }
+                     }
+                  }
+                  edgeFade*=step(0.56,capturedDepth);
+                  transmitted=mix(transmitted,texture2D(colortex8,refractedUV).rgb,edgeFade);
+               }
+            }
+            color.rgb=transmitted;
+         }
+      }
       vec4 reflectionColor = (isDhWater || (isWater && depth >= 1.0)) ? vec4(0.0) : getReflectionColor(depth, normal, viewPos, isWater || isGlass);
+      // Screen-space underside rays re-hit the surface and smear above-water geometry.
+      // Use a stable water-medium fallback for total internal reflection instead.
+      if (isWater && isEyeInWater == 1) {
+         vec3 medium=waterScatteringCoefficients()/max(waterTintExtinction(fogColor),vec3(0.00001));
+         float surfaceLight=mix(0.12,1.0,clamp(float(eyeBrightnessSmooth.y)/240.0,0.0,1.0));
+         vec3 fallback=pow(max(medium*0.14*surfaceLight,vec3(0.0)),vec3(1.0/2.2));
+#if defined OVERWORLD || defined THE_SIFT
+         // Surface hue follows the same absorption/scattering medium as water fog.
+         vec3 waterFogHue=medium/max(max(medium.r,medium.g),max(medium.b,0.00001));
+         fallback=pow(max(waterFogHue*0.18*surfaceLight,vec3(0.0)),vec3(1.0/2.2));
+#endif
+         vec4 undersideHit=underwaterSceneReflection(viewPos,normal);
+         reflectionColor=vec4(mix(fallback,undersideHit.rgb,undersideHit.a*0.12),1.0); // Softer underwater scenery reflections.
+      }
       #ifndef WATER_SCENE_REFLECTIONS
          if (isWater) reflectionColor = vec4(0.0);
       #endif
       #if defined SKY_REFLECTIONS && (defined OVERWORLD || defined THE_SIFT)
          if (isWater || isGlass) {
             vec3 reflectedDirection = view2eye(reflect(normalize(viewPos), normal));
-            vec3 skyReflection = pow(labSkyEnvironment(reflectedDirection, 0.05, skyColor, fogColor), vec3(1.0/2.2));
+            vec3 reflectedSkyColor = vvBiomeAtmosphereColor(skyColor,1.0);
+            vec3 reflectedFogColor = vvBiomeAtmosphereColor(fogColor,0.0);
+#ifdef OVERWORLD
+            vec3 stormSky = vvDryBiomeFogColor(mix(fogColor,skyColor,0.35));
+            reflectedSkyColor = mix(reflectedSkyColor,stormSky,clamp(vvDryBiomeDust,0.0,1.0)*0.97);
+            reflectedFogColor = mix(reflectedFogColor,stormSky,clamp(vvDryBiomeDust,0.0,1.0)*0.97);
+#endif
+            vec3 skyReflection = pow(labSkyEnvironment(reflectedDirection, 0.05, reflectedSkyColor, reflectedFogColor), vec3(1.0/2.2));
 
             if (!(isWater && isEyeInWater == 1))
                reflectionColor.rgb = mix(skyReflection, reflectionColor.rgb, reflectionColor.a);
@@ -170,11 +307,25 @@ void main() {
          }
          if (isEyeInWater == 1) {
             // Water-to-air critical angle: transmit overhead, reflect at grazing angles.
-            float internalReflection=1.0-smoothstep(0.62,0.70,abs(viewCosine));
-            fresnel=mix(fresnel,1.0,internalReflection);
+            // Water-to-air dielectric Fresnel, evaluated on the wave normal.
+            // Refraction and Fresnel must use the same textured normal.
+            // The horizontal surface still forms a circle, with texel-scale waves.
+
+            float ci=clamp(abs(viewCosine),0.0,1.0);
+            float transmittedSin2=1.333*1.333*(1.0-ci*ci);
+            if (transmittedSin2>=1.0) fresnel=1.0;
+            else {
+               float ct=sqrt(max(1.0-transmittedSin2,0.0));
+               float rs=(1.333*ci-ct)/max(1.333*ci+ct,0.00001);
+               float rp=(ci-1.333*ct)/max(ci+1.333*ct,0.00001);
+               fresnel=0.5*(rs*rs+rp*rp);
+               // A small rough-wave spread avoids a razor-sharp surface ring.
+               // The animated surface normal supplies the wave variation.
+            }
             // Keep actual hit confidence: a missing reflection must not become opaque fog.
          }
          reflectionColor.a *= fresnel;
+         if (isEyeInWater == 1) waterBloomTransmission *= 1.0-fresnel;
       }
       else {
       #if COLOR_GRADING == 1
@@ -186,7 +337,8 @@ void main() {
 #if COLOR_GRADING == 1
       if (isWater) {
          waterReflection = pow(max(reflectionColor.rgb,vec3(0.0)),vec3(2.2));
-         waterReflectionWeight = clamp(reflectionColor.a*reflectivity*0.1*REFLECTIONS,0.0,isEyeInWater == 1 ? 1.0 : 0.75); // Reserve transmission; celestial glints remain independent.
+         waterReflectionWeight = isEyeInWater == 1 ? clamp(reflectionColor.a,0.0,1.0)
+                                  : clamp(reflectionColor.a*reflectivity*0.030*REFLECTIONS,0.0,0.30); // Reserve transmission; celestial glints remain independent.
       } else
 #endif
       color.rgb = mix(color.rgb,reflectionColor.rgb,reflectionColor.a*reflectivity*0.1*REFLECTIONS);
@@ -221,28 +373,28 @@ void main() {
       }
       #endif
    #endif
-   vec3 entityIrradiance=resolveEntityLight(texUV);
+   vec3 heldIrradiance=vec3(0.0);
 #if HAND_DYNAMIC_LIGHTING >= 0 && !defined LAMB_DYNAMIC_LIGHTS
    bool enchantedHeld = texelFetch(enchantedHeldSampler,ivec2(0),0).r != 0u;
    bool redstoneHeld = heldItemId == 42013 || heldItemId2 == 42013;
    if (enchantedHeld || redstoneHeld) {
-      float heldReceiverDepth=entityReceiverDepth(texUV);
+      float heldReceiverDepth=heldLightReceiverDepth(texUV);
       if (heldReceiverDepth > 0.56 && heldReceiverDepth < 1.0) {
          vec3 heldReceiver=screen2view(texUV,heldReceiverDepth);
          float enchantedFalloff=max(0.0,1.0-length(heldReceiver)/6.0);
          if (enchantedHeld)
-            entityIrradiance+=vec3(0.10,0.035,0.18)*enchantedFalloff*enchantedFalloff;
+            heldIrradiance+=vec3(0.10,0.035,0.18)*enchantedFalloff*enchantedFalloff;
          // Redstone blocks have shader emission but no native light level.
          // Item IDs cover either hand without depending on visible glow pixels.
          if (redstoneHeld) {
             float redstoneFalloff=max(0.0,1.0-length(heldReceiver)/8.0);
-            entityIrradiance+=vec3(0.4,0.006,0.002)*redstoneFalloff*redstoneFalloff;
+            heldIrradiance+=vec3(0.4,0.006,0.002)*redstoneFalloff*redstoneFalloff;
          }
       }
    }
 #endif
    vec3 receiverBase=max(texture2D(colortex1,texUV).rgb,vec3(0.0));
-   color.rgb=pow(pow(max(color.rgb,vec3(0.0)),vec3(2.2))+receiverBase*entityIrradiance,vec3(1.0/2.2));
+   color.rgb=pow(pow(max(color.rgb,vec3(0.0)),vec3(2.2))+receiverBase*heldIrradiance,vec3(1.0/2.2));
    #if COLOR_GRADING == 1
       vec3 sceneLinear = pow(max(color.rgb, vec3(0.0)), vec3(2.2));
       float opaqueDepth = texture2D(depthtex1, texUV).x;
@@ -295,8 +447,17 @@ void main() {
          sceneLinear = vvWaterFog(sceneLinear,entry,exitPosition);
       }
       if (isWater) {
-         sceneLinear = vvWaterSurfaceTint(sceneLinear);
+         if (isEyeInWater == 0) sceneLinear = vvWaterSurfaceTint(sceneLinear);
          sceneLinear = mix(sceneLinear,waterReflection,waterReflectionWeight);
+#ifdef OVERWORLD
+         if (isEyeInWater == 0 && !isDhWater) {
+            vec3 waterPosition=waterEntryPosition(texUV,nearestDepth);
+            float directSun=smoothstep(0.0,0.12,normalize(view2eye(sunPosition)).y)*(1.0-rainStrength);
+            directSun*=vvSunVisibility(view2feet(waterPosition)+cameraPosition);
+            float surfacePattern=clamp(reflectivityAndRoughness.y,0.0,1.0);
+            sceneLinear*=1.0-0.25*surfacePattern*(1.0-0.65*clamp(directSun,0.0,1.0))*clamp(WATER_TEXTURE_OVERLAY,0.0,1.0);
+         }
+#endif
       }
       if (isEyeInWater == 0) {
          sceneLinear += waterSurfaceGlint;
@@ -304,6 +465,22 @@ void main() {
       // Composite air last so water absorption/tint/reflections cannot erase foreground mist.
       if (!handPixel && !depthlessOverlay && isEyeInWater == 0) {
          sceneLinear = vvVolumetrics(sceneLinear,isWater ? waterEntryPosition(texUV,nearestDepth) : opaquePosition);
+#ifdef OVERWORLD
+         // Apply dense storm extinction after water tint, glints and reflections.
+         // Use the visible water surface distance, not the opaque lake bed.
+         if (vvPaleGarden > 0.001) {
+            vec3 palePosition=isWater ? waterEntryPosition(texUV,nearestDepth) : opaquePosition;
+            float paleOpacity=min(0.98,1.0-exp(-max(length(palePosition)-2.0,0.0)/12.0))*clamp(vvPaleGarden,0.0,1.0);
+            vec3 paleColor=vvBiomeAtmosphereColor(mix(fogColor,skyColor,0.35),0.0);
+            sceneLinear=mix(sceneLinear,pow(max(paleColor,vec3(0.0)),vec3(2.2)),paleOpacity);
+         }
+         if (isWater && vvDryBiomeDust > 0.001) {
+            float dustDistance=length(waterEntryPosition(texUV,nearestDepth));
+            float dustOpacity=min(0.97,1.0-exp(-max(dustDistance-3.0,0.0)/18.0))*clamp(vvDryBiomeDust,0.0,1.0);
+            vec3 dustColor=vvDryBiomeFogColor(mix(fogColor,skyColor,0.35));
+            sceneLinear=mix(sceneLinear,pow(max(dustColor,vec3(0.0)),vec3(2.2)),dustOpacity);
+         }
+#endif
          #if defined THE_NETHER || defined THE_END || defined THE_SIFT
             vec3 fogPosition = opaquePosition;
             // Stop at the nearest visible translucent surface as well as solid terrain.
@@ -331,7 +508,9 @@ void main() {
       #ifdef THE_SIFT
          sceneLinear += vvBloom(texUV) * SIFT_GLOW;
       #else
-         sceneLinear += vvBloom(texUV);
+         // Bloom must cross the same interface as the transmitted scene.
+         sceneLinear += isWater && isEyeInWater == 1
+            ? vvBloom(waterBloomUV)*waterBloomTransmission : vvBloom(texUV);
       #endif
       color.rgb = vvToneMap(sceneLinear);
       #ifdef THE_SIFT
@@ -357,5 +536,16 @@ void main() {
          color.rgb = pow(labHighlightShoulder(pow(max(color.rgb,vec3(0.0)),vec3(2.2))+highlight,0.65),vec3(1.0/2.2));
       }
    #endif
+   // Apply status darkness after atmosphere, reflection, emission and bloom.
+   // Distant sky and DH geometry must fade together with the native world.
+   float statusDarkness=clamp(max(darknessFactor,blindness),0.0,1.0);
+   if (statusDarkness>0.0) {
+      float visibleDepth=texture2D(depthtex0,texUV).x;
+      float visibleDistance=length(vvOpaquePosition(texUV));
+      if (visibleDepth<1.0) visibleDistance=length(screen2view(texUV,visibleDepth));
+      float statusFog=1.0-exp(-max(visibleDistance-2.0,0.0)*0.45);
+      if (visibleDepth<0.56) statusFog=0.35;
+      color.rgb*=1.0-statusDarkness*statusFog;
+   }
    gl_FragData[0] = color;
 }

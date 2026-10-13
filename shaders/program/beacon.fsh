@@ -1,5 +1,4 @@
 #include "/shader.h"
-#include "/common/entity_emission_target.glsl"
 uniform int renderStage;
 uniform sampler2D gtexture;
 uniform int blockEntityId;
@@ -21,13 +20,8 @@ void main() {
    // Beacon emission bypasses the lightmap, surface normals and material lighting.
    float fog = getFogMix(beamFeetPos);
    beam.rgb = mix(beam.rgb,getFogColor(fog,beamFeetPos),fog);
-   /* DRAWBUFFERS:067528 */
+   /* DRAWBUFFERS:06752 */
    gl_FragData[0] = beam;
-   gl_FragData[5] = vec4(0.0);
-#if defined ENTITY_DYNAMIC_LIGHTING && !defined LAMB_DYNAMIC_LIGHTS
-   if (renderStage==MC_RENDER_STAGE_ENTITIES && beam.a>0.05)
-      gl_FragData[5]=vec4(pow(max(beam.rgb,vec3(0.0)),vec3(2.2)),1.0);
-#endif
    gl_FragData[1] = vec4(0.0,0.0,0.0,1.0);
    gl_FragData[2] = vec4(0.0,0.0,0.9,1.0);
    gl_FragData[3] = vec4(0.0);

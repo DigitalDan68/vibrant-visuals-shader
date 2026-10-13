@@ -10,6 +10,7 @@ uniform float viewWidth, viewHeight, frameTimeCounter;
 #include "/common/transformations.glsl"
 #endif
 
+flat varying float redstonePower;
 flat varying float portalSurface;
 flat varying float glassSurface;
 flat varying float waterSurface;
@@ -55,6 +56,7 @@ void main() {
    // test is disabled. Other surfaces still need texture cutout rejection
    // before they can write depth or replace the water metadata behind them.
    if (waterSurface < 0.5 && albedo.a*color.a < 0.001) discard;
+   vec3 redstoneBase = pow(max(albedo.rgb*color.rgb,vec3(0.0)),vec3(2.2));
    float waterDetail = 0.0;
    vec4 ambient = ambient;
    vec4 color   = color;
@@ -87,6 +89,15 @@ void main() {
    if (portalSurface > 0.5)
       albedo.rgb = pow(pow(max(albedo.rgb*color.rgb,vec3(0.0)),vec3(2.2))*PORTAL_EMISSION,vec3(1.0/2.2));
    else albedo.rgb *= color.rgb*ambient.rgb;
+   // Resource packs may route dust through the translucent terrain pass.
+   // State IDs distinguish powered wire without guessing from texture colors.
+   if (redstonePower > 0.0) {
+      float peak = max(redstoneBase.r,max(redstoneBase.g,redstoneBase.b));
+      float emission = 3.0*pow(redstonePower,5.0)*INTEGRATED_EMISSION;
+      vec3 radiance = pow(max(albedo.rgb,vec3(0.0)),vec3(2.2));
+      radiance += redstoneBase/max(peak,0.001)*emission*1.5;
+      albedo.rgb = pow(radiance,vec3(1.0/2.2));
+   }
    albedo.a *= color.a*ambient.a;
    #if COLOR_GRADING == 1
       if (waterSurface > 0.5) {
@@ -96,11 +107,18 @@ void main() {
          float thickness = 48.0;
          if (opaqueDepth < 1.0)
             thickness = clamp(length(screen2view(uv, opaqueDepth)) - length(feet2view(feetPos)), 0.0, 48.0);
-         vec3 absorption = exp(-waterTintExtinction(waterBiomeTint) * thickness * (WATER_ABSORPTION/0.08));
+         vec3 absorption = exp(-waterTintExtinction(waterBiomeTint) * thickness);
          albedo.rgb *= absorption;
          albedo.a = max(albedo.a * 0.55, 1.0 - exp(-thickness * WATER_ABSORPTION));
 #else
-         albedo.a = 0.0; // Final supplies absorption/scattering once; no overlapping native/DH surface tint.
+         // Retain a small physical surface layer in the transparency blend.
+// A nearer glass face replaces the deferred water tag, so zero-alpha
+// water would otherwise disappear completely through stained glass.
+         vec3 surfaceTint = waterStyledTint(waterBiomeTint);
+         // Preserve the biome hue; use neutral lighting for this surface layer.
+         float surfaceLight = max(dot(ambient.rgb,vec3(0.2126,0.7152,0.0722)),0.08);
+         albedo.rgb = surfaceTint * surfaceLight;
+         albedo.a = 0.08;
 #endif
       }
    #endif

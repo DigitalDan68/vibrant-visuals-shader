@@ -6,6 +6,7 @@ uniform int entityId;
 uniform int currentRenderedItemId;
 #if (defined GBUFFERS_TERRAIN || defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT || defined GBUFFERS_HAND) && !defined MOD_COLORWHEEL
    flat varying float integratedId;
+   flat varying float cutCopperSurface;
    varying vec3 pbrNormal;
    varying vec4 pbrTangent;
    flat varying float pbrIsThin;
@@ -79,20 +80,19 @@ varying vec3 gradientFogColor;
 #endif
 
 #if defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT
-#include "/common/entity_vertex_light.glsl"
 #endif
 void main() {
    gl_Position = ftransform();
-#if defined ENTITY_DYNAMIC_LIGHTING && (defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT) && !defined LAMB_DYNAMIC_LIGHTS
-   if(currentRenderedItemId<=0 && blockEntityId<=0)
-      captureEntityVertexLight((gl_ModelViewMatrix*gl_Vertex).xyz,(gl_TextureMatrix[1]*gl_MultiTexCoord1).xy,gl_Color);
-#endif
    #if (defined GBUFFERS_TERRAIN || defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT || defined GBUFFERS_HAND) && !defined MOD_COLORWHEEL
       #ifdef GBUFFERS_TERRAIN
-      integratedId = (blockEntityId == 20007 || blockEntityId == 20008 || (blockEntityId >= 43101 && blockEntityId <= 43113) || (blockEntityId >= 30020 && blockEntityId <= 30022)) ? float(blockEntityId) : mc_Entity.x;
+      float terrainMaterialId=mc_Entity.x;
+      integratedId = (blockEntityId == 20007 || blockEntityId == 20008 || (blockEntityId >= 43101 && blockEntityId <= 43113) || (blockEntityId >= 30020 && blockEntityId <= 30022)) ? float(blockEntityId) : terrainMaterialId;
       #else
       integratedId = currentRenderedItemId > 0 ? float(currentRenderedItemId) : (blockEntityId == 20007 || blockEntityId == 20008 || (blockEntityId >= 43101 && blockEntityId <= 43113) ? float(blockEntityId) : float(entityId));
       #endif
+      cutCopperSurface = float(integratedId>=43501.0 && integratedId<=43504.0);
+      if (cutCopperSurface>0.5)
+         integratedId = integratedId<43501.5 ? 20008.0 : 43100.0+(integratedId-43501.0);
       pbrNormal = view2eye(gl_NormalMatrix * gl_Normal);
       pbrNormal = dot(pbrNormal,pbrNormal)>0.00001 ? normalize(pbrNormal) : vec3(0.0,1.0,0.0);
       #ifdef GBUFFERS_TERRAIN

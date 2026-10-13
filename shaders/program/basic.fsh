@@ -1,6 +1,5 @@
 #ifdef ENTITY_GLOW_PASS
 #include "/shader.h"
-#include "/common/entity_emission_target.glsl"
 #endif
 #ifdef ENCHANTMENT_GLINT_PASS
 #include "/shader.h"
@@ -18,14 +17,10 @@ varying vec4 color;
 
 void main() {
 #ifdef ENTITY_GLOW_PASS
-   /* DRAWBUFFERS:08 */
+   /* DRAWBUFFERS:0 */
    vec4 emissive=texture2D(gtexture,texUV)*color;
    if (emissive.a<0.01) discard;
    gl_FragData[0]=emissive;
-   gl_FragData[1]=vec4(0.0);
-#if defined ENTITY_DYNAMIC_LIGHTING && !defined LAMB_DYNAMIC_LIGHTS
-   gl_FragData[1]=vec4(pow(max(emissive.rgb,vec3(0.0)),vec3(2.2)),1.0);
-#endif
 #elif defined ENCHANTMENT_GLINT_PASS
    // Glint geometry has UVs but no lightmap attributes. Preserve native tint,
    // animation and GlintAlpha; the render type supplies its overlay blending.

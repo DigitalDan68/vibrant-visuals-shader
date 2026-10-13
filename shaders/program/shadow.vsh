@@ -8,14 +8,10 @@ flat varying float shadowGlass;
 varying vec3 shadowTint;
 
 #include "/common/getShadowDistortion.glsl"
-#include "/common/voxel_write.glsl"
 
 void main() {
-#ifdef COLORED_BLOCK_LIGHTING
-   writeBlockVoxel();
-#endif
    bool entityShadow=renderStage==MC_RENDER_STAGE_ENTITIES || renderStage==MC_RENDER_STAGE_BLOCK_ENTITIES;
-   shadowGlass = float(!entityShadow && mc_Entity.x == 30030.0);
+   shadowGlass = float(!entityShadow && (mc_Entity.x == 30030.0 || mc_Entity.x == 30031.0));
    shadowTint = gl_Color.rgb;
    gl_Position = ftransform();
    gl_Position.xyz = getShadowDistortion(gl_Position.xyz);
