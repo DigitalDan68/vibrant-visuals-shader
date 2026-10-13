@@ -1,5 +1,7 @@
 # Vibrant Visuals Shader: A fork of Miniature shader by ukrech
 
+![Vibrant Visuals Shader: reflective water beneath a forest waterfall](README_IMG.png)
+
 A modified fork of [Miniature shader by ukrech](https://github.com/mateuskreuch/minecraft-miniature-shader). The original MIT license and copyright notice are included in LICENSE; the original README is preserved in README_ORIGINAL.md.
 
 ## Installation
