@@ -402,7 +402,9 @@ void main() {
       float nearestDepth = texture2D(depthtex0, texUV).x;
       // Translucent entity render types are omitted from depthtex1. Stop air
       // scattering at their actual front depth rather than the sky behind them.
-      if (texture2D(colortex1,texUV).a < -1.5 && nearestDepth < 1.0)
+      // A water surface can cover an earlier entity marker. Its front depth
+      // is the water entry, not the mob exit; retain depthtex1 behind water.
+      if (!isWater && texture2D(colortex1,texUV).a < -1.5 && nearestDepth < 1.0)
          opaquePosition = screen2view(texUV,nearestDepth);
       bool handPixel = nearestDepth < 0.56;
       vec3 waterSurfaceGlint = vec3(0.0);
