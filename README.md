@@ -4,7 +4,7 @@
 
 Vibrant Visuals Shader brings a Bedrock-inspired atmosphere to Minecraft Java Edition while keeping Minecraft's pixel style. It combines colorful biome skies, reflective water, animated caustics, volumetric fog, and glowing materials, with settings that let you shape the look and choose your performance level.
 
-This is a fork of [Miniature shader by ukrech](https://github.com/mateuskreuch/minecraft-miniature-shader), maintained by DigitalDan68. Version **1.0.0** is available from [GitHub Releases](https://github.com/DigitalDan68/vibrant-visuals-shader/releases/latest).
+This is a fork of [Miniature shader by ukrech](https://github.com/mateuskreuch/minecraft-miniature-shader), maintained by DigitalDan68. Version **1.1.0** is available from [GitHub Releases](https://github.com/DigitalDan68/vibrant-visuals-shader/releases/latest).
 
 ## Features
 
@@ -25,16 +25,21 @@ This is a fork of [Miniature shader by ukrech](https://github.com/mateuskreuch/m
 - Dense sandy storm fog and square wind-blown particles in desert and Badlands biomes. Thunderstorms increase wind speed; rain uses fewer particles.
 - Savanna weather darkens the sky without sandy storm fog or particles.
 - Height fog, atmospheric light shafts, twilight rays, and adjustable weather opacity.
+- Cave sunlight and moonlight shafts with soft shadow sampling and a gradual depth fade. Moon rays use one quarter of daytime strength.
+- Filtered volumetric shadow sampling and stratified integration across air, water, and dimension fog.
+- Particle Rain support for rain sprites generated from the stock rain texture.
 - Distant Horizons support for distant terrain and water, with cloud compatibility.
 
 ### Lighting and materials
 
-- Directional shadows, colored stained-glass and translucent-ice shadows, and optional cloud shadows.
+- Directional shadows with filtered edge coverage, colored stained-glass and translucent-ice shadows, and optional cloud shadows.
 - Colored glass shadows enabled by Ultra; cloud shadow strength defaults to zero.
 - Screen-space reflections for supported blocks, glass, and water.
 - Integrated PBR materials with specular capped at 25%, including metallic rail sections and minecarts.
 - Resource-pack normal and specular maps can override the integrated material defaults.
-- Selective emission for lantern interiors, torch flames, glow lichen, sculk flecks, Creaking eyes, activated Creaking hearts, and other luminous materials.
+- Selective emission for lantern interiors, torch tips, glow lichen highlights, sculk and shrieker flecks, berry-bearing vines and glow berry items, End Crystal cores, crying obsidian cracks, vault light panels, Creaking eyes, and activated Creaking hearts.
+- Frame-based native animation masks: changing texels glow as they brighten, while static texture details stay unlit. Authored resource-pack emission maps retain priority.
+- Better Nether Portals support, including horizontal portals, restrained surface emission, and stronger bloom.
 - Bloom, ambient occlusion, exposure controls, and adjustable color grading.
 - Support for Darkness, Blindness, Night Vision, and Nausea visual effects.
 - Optional glowing ores and waxed-block highlighting.
@@ -84,3 +89,7 @@ Minecraft water asset origins are documented in [WATER_ASSET_SOURCE.md](shaders/
 ## Disclaimer 
 
 This Shader fork heavily relies on Generative AI (Codex) for code. I'm not the best programmer but plan on learning as time goes on. I really want this shader to just exist and this was my way of getting it here. Thank you for your understanding.  
+
+### Texture compatibility
+
+Particle Rain sprite matching and the integrated animated-emission envelopes target the stock Minecraft textures. Resource packs that replace those textures may need matching references or authored emission maps.

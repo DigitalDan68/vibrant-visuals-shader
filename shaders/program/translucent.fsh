@@ -4,6 +4,7 @@ uniform int isEyeInWater;
 uniform float screenBrightness;
 uniform ivec2 eyeBrightnessSmooth;
 uniform sampler2D gtexture;
+#include "/common/animated_emission.glsl"
 #if COLOR_GRADING == 1
 uniform sampler2D depthtex1;
 uniform float viewWidth, viewHeight, frameTimeCounter;
@@ -12,6 +13,7 @@ uniform float viewWidth, viewHeight, frameTimeCounter;
 
 flat varying float redstonePower;
 flat varying float portalSurface;
+flat varying float animatedPortal;
 flat varying float glassSurface;
 flat varying float waterSurface;
 varying float fogMix;
@@ -86,9 +88,13 @@ void main() {
 
    ambient.rgb += getTorchColor(lightUV.s, ambient.rgb, feetPos, normalize(blockLightNormal));
 
-   if (portalSurface > 0.5)
-      albedo.rgb = pow(pow(max(albedo.rgb*color.rgb,vec3(0.0)),vec3(2.2))*PORTAL_EMISSION,vec3(1.0/2.2));
-   else albedo.rgb *= color.rgb*ambient.rgb;
+   if (portalSurface > 0.5) {
+      float animatedGlow=animatedPortal>0.5 ? vvAnimatedEmission(30020.0,texUV,albedo.rgb) : 1.0;
+      waterDetail=animatedGlow; // Portal metadata carries its per-frame bloom mask.
+      vec3 portalBase=max(albedo.rgb*color.rgb,vec3(0.0));
+      vec3 portalGlow=pow(pow(portalBase,vec3(2.2))*(PORTAL_EMISSION*0.35),vec3(1.0/2.2));
+      albedo.rgb=mix(portalBase*ambient.rgb,portalGlow,animatedGlow);
+   } else albedo.rgb *= color.rgb*ambient.rgb;
    // Resource packs may route dust through the translucent terrain pass.
    // State IDs distinguish powered wire without guessing from texture colors.
    if (redstonePower > 0.0) {
@@ -135,5 +141,5 @@ void main() {
    gl_FragData[0] = albedo;
    gl_FragData[1] = vec4(normal, 1.0);
    gl_FragData[3] = waterSurface > 0.5 ? vec4(waterBiomeTint,0.6+0.4*clamp(lightUV.t,0.0,1.0)) : vec4(0.0);
-   gl_FragData[2] = vec4(reflectivity, waterDetail, waterSurface > 0.5 ? 0.25 : (portalSurface < 0.5 ? 0.6 : 0.5), waterSurface > 0.5 ? 0.6+0.4*clamp(lightUV.s,0.0,1.0) : 1.0);
+   gl_FragData[2] = vec4(reflectivity, waterDetail, waterSurface > 0.5 ? 0.25 : (portalSurface < 0.5 ? 0.6 : 0.51), waterSurface > 0.5 ? 0.6+0.4*clamp(lightUV.s,0.0,1.0) : 1.0);
 }
