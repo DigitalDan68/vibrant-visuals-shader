@@ -86,9 +86,9 @@ void main() {
    #if (defined GBUFFERS_TERRAIN || defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT || defined GBUFFERS_HAND) && !defined MOD_COLORWHEEL
       #ifdef GBUFFERS_TERRAIN
       float terrainMaterialId=mc_Entity.x;
-      integratedId = (blockEntityId == 20007 || blockEntityId == 20008 || (blockEntityId >= 43101 && blockEntityId <= 43113) || (blockEntityId >= 30020 && blockEntityId <= 30022)) ? float(blockEntityId) : terrainMaterialId;
+      integratedId = (blockEntityId == 20007 || blockEntityId == 20008 || (blockEntityId >= 42018 && blockEntityId <= 42022) || (blockEntityId >= 43101 && blockEntityId <= 43113) || (blockEntityId >= 30020 && blockEntityId <= 30022)) ? float(blockEntityId) : terrainMaterialId;
       #else
-      integratedId = currentRenderedItemId > 0 ? float(currentRenderedItemId) : (blockEntityId == 20007 || blockEntityId == 20008 || (blockEntityId >= 43101 && blockEntityId <= 43113) ? float(blockEntityId) : float(entityId));
+      integratedId = currentRenderedItemId > 0 ? float(currentRenderedItemId) : (blockEntityId == 20007 || blockEntityId == 20008 || (blockEntityId >= 42018 && blockEntityId <= 42022) || (blockEntityId >= 43101 && blockEntityId <= 43113) ? float(blockEntityId) : float(entityId));
       #endif
       cutCopperSurface = float(integratedId>=43501.0 && integratedId<=43504.0);
       if (cutCopperSurface>0.5)
@@ -138,7 +138,7 @@ void main() {
       color.rgb *= (heldItemId == 20007 || heldItemId2 == 20007) && mc_Entity.x == 20007.0 ? 0.4 : 1.0;
    #endif
 
-   bool isThin = mc_Entity.x == 10031.0 || (mc_Entity.x == 10059.0 || mc_Entity.x == 42015.0)
+   bool isThin = mc_Entity.x == 10031.0 || (mc_Entity.x == 10059.0 || mc_Entity.x == 42015.0 || mc_Entity.x == 42019.0)
               || mc_Entity.x == 10175.0 || mc_Entity.x == 10176.0;
 
    #if (defined GBUFFERS_TERRAIN || defined GBUFFERS_ENTITIES_OPAQUE || defined GBUFFERS_ENTITIES_TRANSLUCENT || defined GBUFFERS_HAND) && !defined MOD_COLORWHEEL

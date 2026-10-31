@@ -12,6 +12,7 @@ uniform vec3 sunPosition;
 
 flat varying float redstonePower;
 flat varying float portalSurface;
+flat varying float animatedPortal;
 flat varying float glassSurface;
 flat varying float waterSurface;
 varying float fogMix;
@@ -44,6 +45,7 @@ void main() {
    redstonePower = mc_Entity.x >= 43201.0 && mc_Entity.x <= 43215.0 ? (mc_Entity.x-43200.0)/15.0 : 0.0;
    waterSurface = float(mc_Entity.x == 10008.0);
    glassSurface = float(mc_Entity.x == 30030.0);
+   animatedPortal=float(mc_Entity.x==30020.0);
    portalSurface = float(mc_Entity.x >= 30020.0 && mc_Entity.x <= 30022.0);
 
    float sunHeight = view2feet(sunPosition).y;

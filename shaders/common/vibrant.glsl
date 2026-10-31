@@ -92,6 +92,13 @@ vec3 vvBloom(vec2 uv) {
 }
 float vvFogNoise(vec3 p);
 float vvSunVisibility(vec3 world);
+float vvMappedSunVisibility(vec3 world,float unmappedVisibility);
+float vvVolumetricSunVisibility(vec3 world,vec3 worldStep,float unmappedVisibility);
+// Fixed per-pixel stratification breaks up coherent march planes without
+// animating noise or introducing temporal shimmer when the camera is still.
+float vvVolumeSampleOffset() {
+   return 0.35+0.30*fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(0.06711056,0.00583715))));
+}
 float vvForwardPhase(float cosine) {
    float g = 0.55;
    return (1.0-g*g)/pow(max(1.0+g*g-2.0*g*cosine,0.01),1.5);
@@ -99,8 +106,8 @@ float vvForwardPhase(float cosine) {
 vec3 vvVolumetricsBetween(vec3 scene,vec3 airStart,vec3 viewPos) {
 #if COLOR_GRADING == 1 && VOLUMETRIC_SAMPLES > 0 && defined ENABLE_SHADOWS && defined OVERWORLD && defined ENABLE_FOG
    if (VOLUMETRIC_STRENGTH <= 0.0) return scene;
-   // Atmospheric sun haze belongs to skylit air. Avoid marching outdoor fog
-   // and shadow samples over every visible cave surface when no sky reaches us.
+   // Eye skylight controls outdoor haze, but cannot tell whether sunlight
+   // enters the cave farther along the view ray through a ceiling opening.
    float atmosphereAccess = clamp(float(eyeBrightnessSmooth.y)/240.0,0.0,1.0);
    if (isEyeInWater == 1 && length(airStart)>0.001) {
       vec4 surfaceTint = texture2D(colortex2,texUV);
@@ -108,7 +115,6 @@ vec3 vvVolumetricsBetween(vec3 scene,vec3 airStart,vec3 viewPos) {
          atmosphereAccess=max(atmosphereAccess,clamp((surfaceTint.a-0.6)/0.4,0.0,1.0));
    }
    float atmosphereWeight = smoothstep(0.02,0.25,atmosphereAccess);
-   if(atmosphereWeight<0.001) return scene;
 
    float airLength = length(viewPos-airStart);
    if(airLength<0.001) return scene;
@@ -116,37 +122,70 @@ vec3 vvVolumetricsBetween(vec3 scene,vec3 airStart,vec3 viewPos) {
    vec3 direction = (viewPos-airStart)/airLength;
    float sunUp = normalize(view2eye(sunPosition)).y;
    float daylight = smoothstep(-0.02,0.12,sunUp)*(1.0-rainStrength);
+   float moonUp=normalize(view2eye(moonPosition)).y;
+   float moonlight=smoothstep(0.0,0.12,moonUp)*(1.0-smoothstep(-0.02,0.02,sunUp))*(1.0-rainStrength);
+   float caveLightStrength=daylight+0.25*moonlight;
+   // A skylit cave can already exceed the outdoor haze threshold. Keep the
+   // shaft boost until the eye is genuinely outside, not just near an opening.
+   float caveWeight = isEyeInWater == 0
+      ? (1.0-smoothstep(0.35,0.90,atmosphereAccess))*CAVE_RAY_STRENGTH : 0.0;
+   if(atmosphereWeight<0.001 && caveWeight*caveLightStrength<0.001) return scene;
    float phase = vvForwardPhase(dot(direction,normalize(sunPosition)));
    vec3 sunlight = mix(vec3(1.0,0.34,0.08),vec3(1.0,0.93,0.8),smoothstep(0.0,0.5,sunUp));
+   // Normalize the moon tint's luminance so its blue hue does not multiply
+   // another brightness reduction on top of the requested quarter strength.
+   vec3 lumaWeights=vec3(0.2126,0.7152,0.0722);
+   vec3 moonTint=MOON_COLOR/max(dot(MOON_COLOR,lumaWeights),0.0001)
+      *dot(vec3(1.0,0.93,0.8),lumaWeights);
+   float moonRayPhase=0.5+min(vvForwardPhase(dot(direction,normalize(moonPosition))),4.0);
    float twilight = 0.0;
 #ifdef TWILIGHT_RAYS
    twilight = smoothstep(-0.025,0.035,sunUp)*(1.0-smoothstep(0.12,0.35,sunUp))*TWILIGHT_RAY_STRENGTH;
 #endif
    vec3 ambient = pow(max(isEyeInWater == 1 ? skyColor : vvDryBiomeFogColor(fogColor),vec3(0.0)),vec3(2.2))*0.35;
    int raySamples = VOLUMETRIC_SAMPLES;
+   // Eight outdoor haze steps can jump entirely over a narrow cave sunbeam.
+   // Retain the selected quality above this cave-only minimum (maximum 128).
+   if(caveWeight*caveLightStrength>0.001) raySamples=max(raySamples,32);
    float stepLength = range/float(raySamples);
+   vec3 worldStep=view2eye(direction*stepLength);
    float transmission = 1.0;
    vec3 radiance = vec3(0.0);
    vec3 twilightRadiance = vec3(0.0);
+   vec3 caveRadiance = vec3(0.0);
+   float sampleOffset=vvVolumeSampleOffset();
    for (int i=0;i<raySamples;++i) {
-      vec3 world = view2feet(airStart+direction*((float(i)+0.5)*stepLength))+cameraPosition;
+      vec3 world = view2feet(airStart+direction*((float(i)+sampleOffset)*stepLength))+cameraPosition;
       float density = FOG_DENSITY*atmosphereWeight*mix(0.75,1.25,vvFogNoise(world*0.025));
       if (isEyeInWater == 0) density *= mix(1.0,8.0,max(clamp(vvDryBiomeDust,0.0,1.0),clamp(vvPaleGarden,0.0,1.0)));
 #ifdef HEIGHT_FOG
       density *= clamp(exp(-(world.y-FOG_HEIGHT)/48.0),0.25,1.5);
 #endif
       float segment = exp(-stepLength*density*VOLUMETRIC_STRENGTH/192.0);
-      float sunVisibility = vvSunVisibility(world);
+      // Unknown regions beyond the shadow map must not become cave lights.
+      float sunVisibility = vvVolumetricSunVisibility(world,worldStep,atmosphereWeight);
+      float caveSunVisibility = sunVisibility;
+      if(caveWeight>0.001 && atmosphereWeight>0.001)
+         caveSunVisibility=vvVolumetricSunVisibility(world,worldStep,0.0);
       vec3 light = ambient+sunlight*daylight*phase*sunVisibility*0.18;
       // Ray visibility is independent of extinction: brighter beams do not obscure the scene.
       float rayPhase = 0.5+min(phase,4.0);
+      // Only direct sun/moon light contributes underground: no ambient fog veil and no
+      // extra extinction across the whole cave just to make the beams visible.
+      // World-space attenuation stays fixed as the player walks: each 28
+      // blocks below the fade height reduces scattering by another factor e.
+      float caveDepthFade=exp(-max(CAVE_RAY_FADE_HEIGHT-world.y,0.0)/28.0);
+      // Soften the march limit too, rather than cutting a shaft off at 160 m.
+      float caveRangeFade=1.0-smoothstep(120.0,160.0,(float(i)+0.5)*stepLength);
+      vec3 caveLight=sunlight*daylight*rayPhase+moonTint*(0.25*moonlight)*moonRayPhase;
+      caveRadiance += transmission*caveLight*caveSunVisibility*caveWeight
+                    *FOG_DENSITY*VOLUMETRIC_STRENGTH*stepLength*0.025
+                    *caveDepthFade*caveRangeFade
+                    *mix(0.85,1.15,vvFogNoise(world*0.04));
       float rayFringe = 0.0;
       if (twilight > 0.0 && sunVisibility < 0.5) {
          // Very faint illumination at shadow boundaries; no artificial repeating stripes.
-         rayFringe = 0.055*0.25*(vvSunVisibility(world+vec3(0.3,0.0,0.0))
-                    +vvSunVisibility(world-vec3(0.3,0.0,0.0))
-                    +vvSunVisibility(world+vec3(0.0,0.0,0.3))
-                    +vvSunVisibility(world-vec3(0.0,0.0,0.3)));
+         rayFringe = 0.055*sunVisibility*(1.0-sunVisibility);
       }
       twilightRadiance += transmission*sunlight*twilight*daylight*rayPhase*(sunVisibility+rayFringe)
                         *density*stepLength*0.015;
@@ -154,7 +193,9 @@ vec3 vvVolumetricsBetween(vec3 scene,vec3 airStart,vec3 viewPos) {
       transmission *= segment;
    }
    twilightRadiance /= vec3(1.0)+twilightRadiance/0.45;
-   return scene*transmission+radiance+twilightRadiance;
+   float caveRadianceLimit=0.25*mix(1.0,0.25,moonlight);
+   caveRadiance /= vec3(1.0)+caveRadiance/caveRadianceLimit;
+   return scene*transmission+radiance+twilightRadiance+caveRadiance;
 #else
    return scene;
 #endif
@@ -228,17 +269,50 @@ vec3 vvSandSpecks(vec3 scene,vec3 viewPos) {
 vec3 vvVolumetrics(vec3 scene,vec3 viewPos) {
    return vvSandSpecks(vvVolumetricsBetween(scene,vec3(0.0),viewPos),viewPos);
 }
-float vvSunVisibility(vec3 world) {
+float vvMappedSunVisibility(vec3 world,float unmappedVisibility) {
 #if defined ENABLE_SHADOWS && (defined OVERWORLD || defined THE_SIFT)
    vec4 clip = shadowProjection*shadowModelView*vec4(world-cameraPosition,1.0);
    clip.xyz = getShadowDistortion(clip.xyz);
    vec3 uv = clip2screen(clip);
-   if (any(lessThanEqual(uv,vec3(0.0))) || any(greaterThanEqual(uv,vec3(1.0)))) return 1.0;
+   if (any(lessThanEqual(uv,vec3(0.0))) || any(greaterThanEqual(uv,vec3(1.0)))) return unmappedVisibility;
    float visibility=step(uv.z-0.0006*SHADOW_DEPTH_BIAS_SCALE,texture2D(shadowtex1,uv.xy).x);
    vec3 edge=min(uv,vec3(1.0)-uv);
    float coverage=smoothstep(0.0,0.04,min(edge.x,min(edge.y,edge.z)));
-   // Unknown sky outside the shadow map stays lit; fade only its occlusion.
-   return mix(1.0,visibility,coverage);
+   return mix(unmappedVisibility,visibility,coverage);
+#else
+   return 0.0;
+#endif
+}
+float vvSunVisibility(vec3 world) {
+   // Existing outdoor/water callers retain their lit fallback at map edges.
+   return vvMappedSunVisibility(world,1.0);
+}
+float vvVolumetricSunVisibility(vec3 world,vec3 worldStep,float unmappedVisibility) {
+#if defined ENABLE_SHADOWS && (defined OVERWORLD || defined THE_SIFT)
+   vec4 clip=shadowProjection*shadowModelView*vec4(world-cameraPosition,1.0);
+   vec4 nextClip=shadowProjection*shadowModelView*vec4(world+worldStep-cameraPosition,1.0);
+   clip.xyz=getShadowDistortion(clip.xyz);
+   nextClip.xyz=getShadowDistortion(nextClip.xyz);
+   vec3 uv=clip2screen(clip);
+   vec3 delta=clip2screen(nextClip)-uv;
+   if(any(lessThanEqual(uv,vec3(0.0))) || any(greaterThanEqual(uv,vec3(1.0)))) return unmappedVisibility;
+   // Integrate a soft footprint for this ray segment instead of using a binary
+   // shadow decision at its midpoint. This also filters shadow-map texel edges.
+   vec2 radius=max(abs(delta.xy)*0.5,vec2(1.25/float(shadowMapResolution)));
+   float depthRadius=max(abs(delta.z)*0.5,0.00002);
+   float visibility=0.0;
+   for(int x=0;x<2;x++) for(int y=0;y<2;y++) {
+      vec2 sampleUV=uv.xy+(vec2(float(x),float(y))*2.0-1.0)*radius*0.5;
+      if(any(lessThanEqual(sampleUV,vec2(0.0))) || any(greaterThanEqual(sampleUV,vec2(1.0)))) {
+         visibility+=unmappedVisibility*0.25;
+      } else {
+         float blocker=texture2D(shadowtex1,sampleUV).x;
+         visibility+=smoothstep(-depthRadius,depthRadius,blocker-uv.z+0.0006*SHADOW_DEPTH_BIAS_SCALE)*0.25;
+      }
+   }
+   vec3 edge=min(uv,vec3(1.0)-uv);
+   float coverage=smoothstep(0.0,0.04,min(edge.x,min(edge.y,edge.z)));
+   return mix(unmappedVisibility,visibility,coverage);
 #else
    return 0.0;
 #endif
@@ -257,6 +331,35 @@ float vvCausticPattern(vec3 worldPosition) {
    vec2 uv = vec2(tile.x,(tile.y+frame)/frames);
    float value = texture2DLod(waterCausticTex,uv,0.0).r;
    return pow(max(value,0.0),CAUSTICS_POWER);
+}
+// Smooth only the suspended-light pattern. Keep block-aligned bed caustics crisp.
+float vvVolumeCaustics(vec2 position) {
+   ivec2 atlas=textureSize(waterCausticTex,0);
+   int side=max(atlas.x,1);
+   int frames=max(atlas.y/side,1);
+   int frame=int(mod(floor(frameTimeCounter*CAUSTICS_SPEED/0.09),float(frames)));
+   vec2 pixel=position/max(CAUSTICS_SCALE,0.01)*float(side)-0.5;
+   ivec2 base=ivec2(floor(pixel));
+   vec2 f=fract(pixel);
+   float value=0.0;
+   for(int x=0;x<2;x++) for(int y=0;y<2;y++) {
+      ivec2 p=ivec2(mod(vec2(base+ivec2(x,y)),float(side)));
+      float weight=(x==0 ? 1.0-f.x : f.x)*(y==0 ? 1.0-f.y : f.y);
+      value+=texelFetch(waterCausticTex,ivec2(p.x,p.y+frame*side),0).r*weight;
+   }
+   return pow(max(value,0.0),CAUSTICS_POWER);
+}
+float vvVolumeShaftCoverage(vec2 position) {
+   vec2 grid=position/4.0-0.5;
+   vec2 cell=floor(grid);
+   vec2 f=fract(grid); f=f*f*(3.0-2.0*f);
+   float value=0.0;
+   for(int x=0;x<2;x++) for(int y=0;y<2;y++) {
+      float hash=fract(sin(dot(cell+vec2(float(x),float(y)),vec2(127.1,311.7)))*43758.5453);
+      float weight=(x==0 ? 1.0-f.x : f.x)*(y==0 ? 1.0-f.y : f.y);
+      value+=step(0.75,hash)*weight;
+   }
+   return value;
 }
 vec3 vvCausticSunColor() {
 #ifdef OVERWORLD
@@ -355,8 +458,9 @@ vec3 vvDimensionFog(vec3 scene, vec3 viewPosition) {
          float transmission = 1.0;
          vec3 scattering = vec3(0.0);
          vec3 radiance = pow(max(fogTint,vec3(0.0)),vec3(2.2));
+         float sampleOffset=vvVolumeSampleOffset();
          for (int i=0; i<dimensionSamples; i++) {
-            float distance = start + (float(i)+0.5)*stepLength;
+            float distance = start + (float(i)+sampleOffset)*stepLength;
             vec3 world = feet2world(view2feet(direction*distance));
             // Slowly moving, world-anchored density volumes: no screen-space overlay.
             float noise = vvFogNoise(world*0.035 + vec3(frameTimeCounter*0.007,0.0,0.0));
@@ -418,12 +522,13 @@ vec3 vvSiftAtmosphere(vec3 viewPosition) {
    vec3 direction = normalize(viewPosition);
    vec3 worldOrigin = feet2world(view2feet(vec3(0.0)));
    vec3 worldDirection = normalize(view2eye(direction));
-   int siftSamples = VOLUMETRIC_SAMPLES*2;
+   int siftSamples = VOLUMETRIC_SAMPLES;
    float stepLength = range/float(siftSamples);
    vec3 previousCell = vec3(1e20);
    vec3 siftRayRadiance = vec3(0.0);
+   float sampleOffset=vvVolumeSampleOffset();
    for (int i=0;i<siftSamples;++i) {
-      float distance = (float(i)+0.5)*stepLength;
+      float distance = (float(i)+sampleOffset)*stepLength;
       vec3 world = worldOrigin+worldDirection*distance;
       // Drifting projected cloud openings keep thin shafts parallel along their length.
       vec3 axis = normalize(vec3(-0.45,1.0,0.25));
@@ -431,18 +536,16 @@ vec3 vvSiftAtmosphere(vec3 viewPosition) {
       vec2 drift = vec2(frameTimeCounter*0.28,frameTimeCounter*0.13);
       vec2 movingColumn = column+drift;
       float stripe = 0.5+0.5*sin(movingColumn.x*0.65+sin(movingColumn.y*0.12)*0.65);
-      float core = smoothstep(0.965,0.998,stripe);
-      float fringe = smoothstep(0.90,0.985,stripe)*0.055;
+      vec2 columnStep=vec2(worldDirection.x+0.45*worldDirection.y,worldDirection.z-0.25*worldDirection.y)*stepLength;
+      float stripeWidth=min(0.12,0.25*abs(columnStep.x*0.65+columnStep.y*0.078));
+      float core = smoothstep(0.965-stripeWidth,0.998+stripeWidth,stripe);
+      float fringe = smoothstep(0.90-stripeWidth,0.985+stripeWidth,stripe)*0.055;
       float cloud = vvFogNoise(vec3((column+drift*1.7)*0.045,0.0));
       float cloudOpening = smoothstep(0.25,0.72,cloud);
       float beams = (core+fringe)*mix(0.08,1.0,cloudOpening);
       float visibility = 1.0;
 #ifdef ENABLE_SHADOWS
-      vec4 clip = shadowProjection*shadowModelView*vec4(world-cameraPosition,1.0);
-      clip.xyz = getShadowDistortion(clip.xyz);
-      vec3 uv = clip2screen(clip);
-      if (all(greaterThan(uv,vec3(0.0))) && all(lessThan(uv,vec3(1.0))))
-         visibility = step(uv.z-0.001*SHADOW_DEPTH_BIAS_SCALE,texture2D(shadowtex1,uv.xy).x);
+      visibility=vvVolumetricSunVisibility(world,worldDirection*stepLength,1.0);
 #endif
       float phase = 0.7+0.3*pow(max(dot(worldDirection,axis),0.0),3.0);
       siftRayRadiance += mix(vec3(0.95,0.62,0.48),vec3(0.28,0.4,0.65),night)*beams*visibility*phase*SIFT_LIGHT_SHAFTS*stepLength*0.025*exp(-distance/80.0);
@@ -508,8 +611,10 @@ vec3 vvWaterFog(vec3 scene, vec3 startPosition, vec3 endPosition) {
 #if WATER_VOLUMETRIC_SAMPLES > 0
    int waterSamples = WATER_VOLUMETRIC_SAMPLES;
    float stepLength = distanceInWater / float(waterSamples);
+   float sampleOffset=vvVolumeSampleOffset();
+   vec3 waterWorldStep=view2eye((endPosition-startPosition)/float(waterSamples));
    for (int i=0; i<waterSamples; ++i) {
-      float t = (float(i)+0.5)/float(waterSamples);
+      float t = (float(i)+sampleOffset)/float(waterSamples);
       vec3 world = view2feet(mix(startPosition,endPosition,t)) + cameraPosition;
       float density = mix(0.85,1.15,vvFogNoise(world*0.16+vec3(0.0,frameTimeCounter*0.025,0.0)));
       vec3 stepTransmission = exp(-extinction*stepLength*density);
@@ -528,12 +633,10 @@ vec3 vvWaterFog(vec3 scene, vec3 startPosition, vec3 endPosition) {
          float sunUp=smoothstep(0.0,0.12,sunWorld.y);
          float daylight=sunUp*(1.0-rainStrength)*waterSky;
          if (daylight>0.0) {
-            float sunVisibility=vvSunVisibility(world);
+            float sunVisibility=vvVolumetricSunVisibility(world,waterWorldStep,1.0);
             vec2 shaftPosition=world.xz-world.y*sunWorld.xz/max(sunWorld.y,0.12);
-            float shaftPattern=vvCausticPattern(vec3(shaftPosition.x*0.2,0.0,shaftPosition.y*0.2));
-            vec2 shaftCell=floor(shaftPosition/4.0);
-            float shaftCoverage=fract(sin(dot(shaftCell,vec2(127.1,311.7)))*43758.5453);
-            shaftPattern*=step(0.75,shaftCoverage);
+            float shaftPattern=vvVolumeCaustics(shaftPosition*0.2);
+            shaftPattern*=vvVolumeShaftCoverage(shaftPosition);
             float shaftPhase=0.35+min(phase,4.0);
             localScattering+=scatterCoefficient*WATER_SCATTERING*vvCausticSunColor()
                *shaftPattern*8.0*shaftPhase*sunVisibility*daylight*shaftMurkiness*shaftRange;

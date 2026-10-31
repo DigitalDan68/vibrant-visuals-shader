@@ -117,6 +117,10 @@ option.FOG_DENSITY=Fog Density
 option.VOLUMETRIC_SAMPLES=Volumetric Quality
 
 option.VOLUMETRIC_STRENGTH=Sun Ray Strength
+option.CAVE_RAY_STRENGTH=Cave Ray Strength
+option.CAVE_RAY_FADE_HEIGHT=Cave Ray Fade Height
+option.CAVE_RAY_FADE_HEIGHT.comment=World height below which cave sunlight fades gradually with depth. Raise this for higher cave openings; lower it for deeper openings.
+option.CAVE_RAY_STRENGTH.comment=Sunlight and moonlight shafts through cave openings. Moon rays use one quarter strength. Uses Volumetric Quality and shadows; zero disables the additional cave rays.
 
 option.SSAO_SAMPLES=Contact Occlusion Quality
 

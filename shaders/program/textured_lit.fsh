@@ -8,6 +8,7 @@ uniform int entityId;
 uniform ivec2 eyeBrightnessSmooth;
 uniform sampler2D gtexture;
 uniform sampler2D lightmap;
+#include "/common/animated_emission.glsl"
 #if defined GBUFFERS_HAND && HAND_DYNAMIC_LIGHTING >= 0 && !defined LAMB_DYNAMIC_LIGHTS
 layout(r32ui) uniform uimage2D enchantedHeldImage;
 #endif
@@ -175,7 +176,7 @@ void main() {
          metal = 0.55*copperFleck*INTEGRATED_METALS;
       }
       if (integratedId == 30004.0) rough = 0.2;
-      if (integratedId == 30010.0) rough = 0.35;
+      if (integratedId == 30010.0 || integratedId == 42020.0) rough = 0.35;
       if (integratedId >= 30020.0 && integratedId <= 30022.0) emit = PORTAL_EMISSION;
       if (integratedId == 20014.0 || integratedId == 20015.0) rough = 0.12;
       if (integratedId == 20003.0 || integratedId == 20005.0 || integratedId == 20006.0 ||
@@ -226,11 +227,37 @@ void main() {
       // Cyan separation keeps the brown logs and neutral ash non-emissive.
       if (integratedId == 10656.0)
          emit = max(warmPixel,smoothstep(0.03,0.12,min(albedo.g,albedo.b)-albedo.r)*smoothstep(0.12,0.35,bright));
-      if (integratedId == 42016.0)
+      if (integratedId == 42016.0 || integratedId == 42017.0)
          emit=1.2*smoothstep(0.03,0.12,min(albedo.g,albedo.b)-albedo.r)*smoothstep(0.10,0.30,bright);
+      if (integratedId == 42018.0) emit=1.5*step(0.9,pbrNormal.y);
       if (integratedId == 42015.0) {
          float yellowLichen = smoothstep(0.025,0.09,min(albedo.r,albedo.g)-albedo.b);
-         emit = mix(1.4,2.0,yellowLichen);
+         emit = smoothstep(0.28,0.62,bright)*mix(0.12,0.85,yellowLichen);
+      }
+      // Torch caps occupy the small bright patch above the wooden handle.
+      if (integratedId==10496.0 || integratedId==10528.0 || integratedId==10604.0 || integratedId==10984.0) {
+         vec2 pixel=fract(texUV*vec2(textureSize(gtexture,0))/16.0)*16.0;
+         float tip=(1.0-smoothstep(7.9,8.1,pixel.y))*smoothstep(4.9,5.1,pixel.y)
+                  *smoothstep(5.9,6.1,pixel.x)*(1.0-smoothstep(9.9,10.1,pixel.x));
+         emit=max(emit,1.4*tip*smoothstep(0.25,0.65,bright));
+      }
+      if (integratedId==42019.0) {
+         // Orange/yellow fruit only: green leaves and brown stems do not glow.
+         float berry=smoothstep(0.08,0.25,albedo.r-albedo.b)
+                    *smoothstep(0.025,0.12,albedo.r-albedo.g)
+                    *smoothstep(0.48,0.75,albedo.r);
+         emit=1.4*berry;
+      }
+      if (integratedId==42020.0) {
+         float crack=smoothstep(0.035,0.14,min(albedo.r,albedo.b)-albedo.g)
+                    *smoothstep(0.20,0.50,bright);
+         emit=1.4*crack;
+      }
+      if (integratedId==42021.0 || integratedId==42022.0) {
+         float warm=smoothstep(0.10,0.30,albedo.r-albedo.b)*smoothstep(0.45,0.75,albedo.r);
+         float soul=smoothstep(0.07,0.20,min(albedo.g,albedo.b)-albedo.r)*smoothstep(0.40,0.72,bright);
+         float ominousEye=smoothstep(0.12,0.30,albedo.r-max(albedo.g,albedo.b))*smoothstep(0.35,0.65,albedo.r);
+         emit=1.4*(integratedId==42022.0 ? max(soul,ominousEye) : warm);
       }
       // Select saturated vein texels from the unlit texture, leaving dark bark intact.
       if (integratedId >= 43201.0 && integratedId <= 43215.0)
@@ -366,7 +393,24 @@ void main() {
       if (!hasPackSpecular && integratedId == 40008.0)
          pbrEmission = 1.5*smoothstep(0.60,0.85,albedo.r)*smoothstep(0.20,0.40,albedo.r-albedo.b)*INTEGRATED_EMISSION;
 #endif
+      if (!hasPackSpecular && integratedId==40010.0) {
+         // The core is pink/purple; glass borders and the bedrock base are neutral.
+         float crystalCore=smoothstep(0.08,0.25,min(albedo.r,albedo.b)-albedo.g)
+                          *smoothstep(0.45,0.80,max(albedo.r,albedo.b));
+         pbrEmission=1.6*crystalCore*INTEGRATED_EMISSION;
+      }
       float pbrMetal = step(229.5/255.0, specSample.g) * (1.0 - pbrIsThin) * LABPBR_METAL_FACTOR;
+      // Preserve authored resource-pack emission; mask native integrated animations.
+      if (!hasPackSpecular) pbrEmission*=vvAnimatedEmission(integratedId,texUV,albedo.rgb);
+      if (!hasPackSpecular && (integratedId==43001.0 || integratedId==43002.0) && abs(pbrNormal.y)>0.5)
+         pbrEmission=0.0; // Static stem end-grain is not part of the vein animation.
+      if (!hasPackSpecular && integratedId==42018.0) {
+         // Only the tiny vivid cyan flecks, not the broad dark teal sculk
+         // patches or pale bone highlights around the rim.
+         float exterior=smoothstep(0.30,0.50,min(albedo.g,albedo.b)-albedo.r)
+                       *smoothstep(0.40,0.56,max(albedo.g,albedo.b));
+         pbrEmission=max(pbrEmission,exterior*(1.0-step(0.9,pbrNormal.y))*INTEGRATED_EMISSION);
+      }
       float pbrRoughness = clamp(pow(1.0 - specSample.r, 2.0) * LABPBR_ROUGHNESS_SCALE, 0.04, 1.0);
 #if MATERIAL_MODE == 0
       if (!hasPackSpecular) {
