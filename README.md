@@ -32,7 +32,7 @@ This is a fork of [Miniature shader by ukrech](https://github.com/mateuskreuch/m
 
 ### Lighting and materials
 
-- Directional shadows, colored stained-glass and translucent-ice shadows, and optional cloud shadows.
+- Directional shadows with filtered edge coverage, colored stained-glass and translucent-ice shadows, and optional cloud shadows.
 - Colored glass shadows enabled by Ultra; cloud shadow strength defaults to zero.
 - Screen-space reflections for supported blocks, glass, and water.
 - Integrated PBR materials with specular capped at 25%, including metallic rail sections and minecarts.

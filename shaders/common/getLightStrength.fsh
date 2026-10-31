@@ -80,8 +80,10 @@ float getLightStrength(float diffuse, float skyLight, vec3 feetPos) {
          visibility+=step(receiverDepth,depth)*weight;
          glassShade+=(glass && receiverDepth>front ? 0.7 : 1.0)*weight;
       }
-      // Fixed hard edge: no sun-angle-dependent penumbra or filtered gray rim.
-      visibility=step(0.5,visibility);
+      // Retain sub-texel coverage. Re-thresholding the filtered result makes
+      // the entire edge pixel pop between lit/shadowed as the map moves.
+      // The four taps still cover only the native one-texel footprint.
+      visibility=clamp(visibility,0.0,1.0);
       return diffuse*mix(1.0,visibility*glassShade,shadowFade);
    }
 
