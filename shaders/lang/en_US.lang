@@ -46,8 +46,6 @@ screen.SHADOWS_SCREEN=Shadows
 option.SHADOW_BLUENESS=Shadow blueness
 option.shadowDistance=Shadow distance
 option.shadowMapResolution=Shadow resolution
-option.shadowIntervalSize=Shadow refocus rate Â§e[?]
-option.shadowIntervalSize.comment=Determines after how many blocks shadows refocus on the player
 option.entityShadowDistanceMul=Entity shadow distance Â§e[?]
 option.entityShadowDistanceMul.comment=As a percentage of shadow distance
 option.SHADOW_PIXEL=Shadow pixelization
@@ -279,3 +277,8 @@ option.WATER_VOLUMETRIC_SAMPLES.comment=Samples for water fog and sunlight shaft
 
 option.WATER_LIGHT_SHAFTS=Water Light Shafts
 option.WATER_LIGHT_SHAFTS.comment=Underwater sunlight shafts. Enabled by the Ultra preset; disabled by other presets.
+
+option.STABLE_SHADOW_RANGE=Stable Shadow Detail Range
+option.TEMPORAL_SHADOW_CLAMP=Temporal Shadow Clamp
+option.TEMPORAL_SHADOW_CLAMP.comment=Rejects isolated one-frame shadow reversals, then settles confirmed changes over 0.035 seconds using world-position history. No spatial blur.
+option.STABLE_SHADOW_RANGE.comment=Maximum range covered by the stable shadow map. Shorter ranges concentrate resolution on nearby detail; longer ranges reduce detail. Shadows fade out near this limit.

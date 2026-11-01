@@ -2,8 +2,9 @@ uniform sampler2D shadowtex0;
 uniform sampler2D shadowcolor0;
 #include "/common/getShadowDistortion.glsl"
 #include "/common/cloudShadows.glsl"
+#include "/common/temporal_shadow.glsl"
 
-float getLightStrength(float diffuse, float skyLight, vec3 feetPos) {
+float getLightStrength(float diffuse, float skyLight, vec3 feetPos, vec3 receiverNormal) {
    vec3 pos = feetPos;
    float posDistance = squaredLength(pos);
    vec4 shadowView   = shadowModelView * vec4(pos, 1.0);
@@ -13,13 +14,16 @@ float getLightStrength(float diffuse, float skyLight, vec3 feetPos) {
 
    vec3 shadowUV = clip2screen(shadowClip);
 
-   // Evaluate derivatives before lighting-dependent returns. Each depth texel
-   // represents a different point on a sloped receiver, including flat terrain.
-   vec3 dx = dFdx(shadowUV), dy = dFdy(shadowUV);
-   float determinant = dx.x*dy.y-dx.y*dy.x;
+   // Derive the receiver plane analytically. Subtracting adjacent normalized
+   // depths loses precision at close viewing distances, and derivatives inside
+   // material-dependent branches are undefined. Neither should move shadows.
+   vec3 planeNormal = normalize(receiverNormal);
+   vec3 shadowNormal = mat3(shadowModelView)*planeNormal;
+   float detailScale = shadowDistance/min(shadowDistance,STABLE_SHADOW_RANGE);
    vec2 depthGradient = vec2(0.0);
-   if (abs(determinant)>1e-12)
-      depthGradient = vec2(dy.y*dx.z-dx.y*dy.z,dx.x*dy.z-dy.x*dx.z)/determinant;
+   if (abs(shadowNormal.z)>0.0001)
+      depthGradient = -shadowNormal.xy/shadowNormal.z * shadowProjection[2].z
+                    / (vec2(shadowProjection[0].x,shadowProjection[1].y)*detailScale);
 
    vec2 lookupUV = shadowUV.xy;
       // Pixelize the lookup, not the receiver depth. Snapping world XYZ can
@@ -28,12 +32,7 @@ float getLightStrength(float diffuse, float skyLight, vec3 feetPos) {
       vec3 pixelWorld = bandify(worldPos,16.0);
       // Keep the snapped lookup on the receiver plane, avoiding self-shadow
       // artifacts from moving the sample into a solid block.
-      vec3 planeNormal = cross(dFdx(feetPos),dFdy(feetPos));
-      float planeLength = length(planeNormal);
-      if (planeLength>0.000001) {
-         planeNormal/=planeLength;
-         pixelWorld-=planeNormal*dot(pixelWorld-worldPos,planeNormal);
-      }
+      pixelWorld-=planeNormal*dot(pixelWorld-worldPos,planeNormal);
       vec3 pixelPos = world2feet(pixelWorld);
       vec4 pixelClip = shadowProjection*shadowModelView*vec4(pixelPos,1.0);
       pixelClip.xyz = getShadowDistortion(pixelClip.xyz);
@@ -66,25 +65,30 @@ float getLightStrength(float diffuse, float skyLight, vec3 feetPos) {
       // A small texel-scaled slope allowance handles rasterized receiver depth
       // without widening the shadow edge or depending on time of day.
       float slopeBias=min(0.00015,0.5*max(abs(depthGradient.x),abs(depthGradient.y))/resolution);
-      float bias = (0.00002+slopeBias)*SHADOW_DEPTH_BIAS_SCALE;
+      // Express the minimum clearance in world units. A near-zero normalized
+      // bias can let the visible face alternate with its own rasterized depth.
+      float bias = max((0.00002+slopeBias)*SHADOW_DEPTH_BIAS_SCALE,
+                       0.035/(shadowFarPlane-shadowNearPlane));
       for (int tap=0;tap<4;++tap) {
          vec2 corner = vec2(float(tap%2),float(tap/2));
-         vec2 uv = (base+corner+0.5)/resolution;
+         ivec2 texel=clamp(ivec2(base+corner),ivec2(0),ivec2(shadowMapResolution-1));
+         vec2 uv = (vec2(texel)+0.5)/resolution;
          vec2 weights = mix(vec2(1.0)-fraction,fraction,corner);
          float weight = weights.x*weights.y;
          float receiverDepth = snappedShadowUV.z+dot(depthGradient,uv-lookupUV)-bias;
-         float front=texture2D(shadowtex0,uv).x;
-         float opaque=texture2D(shadowtex1,uv).x;
-         bool glass=texture2D(shadowcolor0,uv).a>0.5;
+         float front=texelFetch(shadowtex0,texel,0).x;
+         float opaque=texelFetch(shadowtex1,texel,0).x;
+         bool glass=texelFetch(shadowcolor0,texel,0).a>0.5;
          float depth=glass ? opaque : min(front,opaque);
          visibility+=step(receiverDepth,depth)*weight;
          glassShade+=(glass && receiverDepth>front ? 0.7 : 1.0)*weight;
       }
-      // Retain sub-texel coverage. Re-thresholding the filtered result makes
-      // the entire edge pixel pop between lit/shadowed as the map moves.
-      // The four taps still cover only the native one-texel footprint.
-      visibility=clamp(visibility,0.0,1.0);
-      return diffuse*mix(1.0,visibility*glassShade,shadowFade);
+      // Sharp spatial boundary; stabilize changes in time instead.
+      visibility=step(0.5,visibility)*glassShade;
+      #if defined TEMPORAL_SHADOW_CLAMP && defined OVERWORLD && defined GBUFFERS_TERRAIN && !defined MOD_COLORWHEEL
+         visibility=temporalShadowClamp(visibility,feetPos,planeNormal);
+      #endif
+      return diffuse*mix(1.0,visibility,shadowFade);
    }
 
    return diffuse;

@@ -77,7 +77,7 @@ void main() {
       float diffuse = clamp(2.5 * dot(normalize(dhNormal), normalize(view2eye(shadowLightPosition))), -0.3333, 1.0);
       diffuse *= (isEyeInWater == 0 ? 1.0 : 0.5) * (1.0 - rainStrength)
                * clamp(0.1*abs(sunHeight) - 0.4453, 0.0, 1.0);
-      float strength = max(getLightStrength(diffuse, lightUV.t, feetPos), 0.75 * dhEmission);
+      float strength = max(getLightStrength(diffuse, lightUV.t, feetPos, dhNormal), 0.75 * dhEmission);
       ambient.rgb *= mix(SHADOW_COLOR, vec3(1.0), strength);
       ambient.rgb *= 0.75 + max(0.0, LIGHT_BRIGHTNESS - 0.5*pow3(luma(albedo.rgb)))
                    * strength * getLightColor(sunHeight, lightUV.t);
