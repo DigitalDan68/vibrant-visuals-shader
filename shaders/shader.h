@@ -118,11 +118,20 @@ const bool colortex4Clear = true;
 
 const int   shadowMapResolution = 1024;  //[256 512 1024 2048 3072 4096]
 const float shadowDistance      = 384.0; //[8.0 16.0 32.0 64.0 96.0 128.0 192.0 256.0 384.0 512.0 768.0 1024.0]
+#define STABLE_SHADOW_RANGE 128.0 //[32.0 64.0 96.0 128.0 192.0 256.0 384.0 512.0 768.0]
+#define TEMPORAL_SHADOW_CLAMP
+const int colortex10Format = RGBA32F;
+const int colortex11Format = RGBA32F;
+const bool colortex10Clear = true;
+const vec4 colortex10ClearColor = vec4(0.0,0.0,0.0,0.0);
+const bool colortex11Clear = false;
 // Cover off-screen roofs/ceilings along the light axis as well as across the map.
 const float shadowNearPlane = -2048.0;
 const float shadowFarPlane = 2048.0;
 const float SHADOW_DEPTH_BIAS_SCALE = 256.05 / (shadowFarPlane-shadowNearPlane);
-const float shadowIntervalSize  = 7.0;  //[1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0 16.0]
+// Coarse world-grid recentering re-rasterizes the distorted map abruptly.
+// Zero disables Iris' camera snapping; keep this fixed, not a user option.
+const float shadowIntervalSize  = 0.0;
 const float shadowDistanceRenderMul = 1.0;
 const float entityShadowDistanceMul = 1.0; //[0.125 0.2 0.25 0.333 0.5 0.75 1.0]
 const float sunPathRotation = 0.0; //[-90.0 -85.0 -80.0 -75.0 -70.0 -65.0 -60.0 -55.0 -50.0 -45.0 -40.0 -35.0 -30.0 -25.0 -20.0 -15.0 -10.0 -5.0 0.0 5.0 10.0 15.0 20.0 25.0 30.0 35.0 40.0 45.0 50.0 55.0 60.0 65.0 70.0 75.0 80.0 85.0 90.0]
@@ -205,7 +214,7 @@ const vec3 END_AMBIENT    = vec3(0.83, 0.7, 1.0);
 
 const vec3 SHADOW_COLOR = vec3(1.0 - SHADOW_DARKNESS) + vec3(0.0, 0.3333, 1.0) * SHADOW_BLUENESS;
 
-const float SHADOW_MAX_DIST_SQUARED = shadowDistance * shadowDistance;
+const float SHADOW_MAX_DIST_SQUARED = min(shadowDistance,STABLE_SHADOW_RANGE) * min(shadowDistance,STABLE_SHADOW_RANGE);
 const float INV_SHADOW_MAX_DIST_SQUARED = 1.0/SHADOW_MAX_DIST_SQUARED;
 
 // Compare individual depths before filtering visibility. Interpolating depth

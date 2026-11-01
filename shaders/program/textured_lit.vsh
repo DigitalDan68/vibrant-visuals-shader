@@ -74,6 +74,7 @@ varying vec3 gradientFogColor;
 
    varying vec3 lightColor;
    varying float diffuse;
+   varying vec3 shadowReceiverNormal;
 
    #include "/common/getDiffuse.vsh"
    #include "/common/getLightColor.vsh"
@@ -161,6 +162,7 @@ void main() {
    gradientFogColor = getFogColor(fogMix, feetPos);
 
    #ifdef ENABLE_SHADOWS
+      shadowReceiverNormal = view2eye(gl_NormalMatrix * gl_Normal);
       float skyLight = clamp(lightUV.t, 0.0, 1.0);
 
       diffuse = getDiffuse(sunHeight, skyLight, isThin);

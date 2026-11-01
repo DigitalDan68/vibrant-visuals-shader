@@ -4,7 +4,7 @@
 
 Vibrant Visuals Shader brings a Bedrock-inspired atmosphere to Minecraft Java Edition while keeping Minecraft's pixel style. It combines colorful biome skies, reflective water, animated caustics, volumetric fog, and glowing materials, with settings that let you shape the look and choose your performance level.
 
-This is a fork of [Miniature shader by ukrech](https://github.com/mateuskreuch/minecraft-miniature-shader), maintained by DigitalDan68. Version **1.1.0** is available from [GitHub Releases](https://github.com/DigitalDan68/vibrant-visuals-shader/releases/latest).
+This is a fork of [Miniature shader by ukrech](https://github.com/mateuskreuch/minecraft-miniature-shader), maintained by DigitalDan68. Version **1.1.1** is available from [GitHub Releases](https://github.com/DigitalDan68/vibrant-visuals-shader/releases/latest).
 
 ## Features
 
@@ -32,7 +32,7 @@ This is a fork of [Miniature shader by ukrech](https://github.com/mateuskreuch/m
 
 ### Lighting and materials
 
-- Directional shadows with filtered edge coverage, colored stained-glass and translucent-ice shadows, and optional cloud shadows.
+- Sharp directional shadows with smooth continuous projection, optional temporal stabilization, and a configurable detail range defaulting to 128 blocks, colored stained-glass and translucent-ice shadows, and optional cloud shadows.
 - Colored glass shadows enabled by Ultra; cloud shadow strength defaults to zero.
 - Screen-space reflections for supported blocks, glass, and water.
 - Integrated PBR materials with specular capped at 25%, including metallic rail sections and minecarts.

@@ -87,6 +87,7 @@ varying vec3 gradientFogColor;
 
    varying vec3 lightColor;
    varying float diffuse;
+   varying vec3 shadowReceiverNormal;
 
    #include "/common/getLightStrength.fsh"
 #endif
@@ -494,7 +495,7 @@ void main() {
       #ifdef TERRAIN_LABPBR
          if (pbrIsThin < 0.5) materialDiffuse = pbrDiffuseScale * clamp(2.5 * dot(N, normalize(view2eye(shadowLightPosition))), -0.3333, 1.0);
       #endif
-      float lightStrength = getLightStrength(materialDiffuse, lightUV.t, feetPos);
+      float lightStrength = getLightStrength(materialDiffuse, lightUV.t, feetPos, shadowReceiverNormal);
       float lightBrightness = max(0.0, LIGHT_BRIGHTNESS - 0.5*pow3(albedoLuma));
 
       lightStrength = max(lightStrength, 0.75*lightSourceLevel);
@@ -541,7 +542,7 @@ ambient.rgb += getTorchColor(lightUV.s, ambient.rgb, feetPos, blockLightNormal);
       #if defined ENABLE_SHADOWS || (defined GBUFFERS_HAND && defined OVERWORLD)
          #ifdef ENABLE_SHADOWS
          vec3 L = normalize(view2eye(shadowLightPosition));
-         float visibility = getLightStrength(1.0, lightUV.t, feetPos);
+         float visibility = getLightStrength(1.0, lightUV.t, feetPos, shadowReceiverNormal);
          #else
          // Keep held-tool directional highlights even when shadow maps are disabled.
          vec3 sunDirection = view2eye(sunPosition);
@@ -605,7 +606,12 @@ ambient.rgb += getTorchColor(lightUV.s, ambient.rgb, feetPos, blockLightNormal);
    // Keep the texture and vertex alpha; the native render type selects blending.
    if(albedo.a<0.01) discard;
 #endif
+   #if defined TEMPORAL_SHADOW_CLAMP && defined ENABLE_SHADOWS && defined OVERWORLD && defined GBUFFERS_TERRAIN && !defined MOD_COLORWHEEL
+   /* RENDERTARGETS:0,6,7,5,2,1,10 */
+   gl_FragData[6]=temporalShadowRecord;
+   #else
    /* DRAWBUFFERS:067521 */
+   #endif
    gl_FragData[0] = albedo;
 
 

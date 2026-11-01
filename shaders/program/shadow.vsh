@@ -1,6 +1,9 @@
 #include "/shader.h"
 attribute vec4 mc_Entity;
 uniform int renderStage;
+uniform vec3 cameraPosition;
+uniform mat4 shadowModelView;
+uniform mat4 shadowProjection;
 
 varying vec2 texUV;
 varying float alpha;
@@ -13,7 +16,9 @@ void main() {
    bool entityShadow=renderStage==MC_RENDER_STAGE_ENTITIES || renderStage==MC_RENDER_STAGE_BLOCK_ENTITIES;
    shadowGlass = float(!entityShadow && (mc_Entity.x == 30030.0 || mc_Entity.x == 30031.0));
    shadowTint = gl_Color.rgb;
-   gl_Position = ftransform();
+   // Use the same pack projection as the receiver lookup, including its
+   // explicit near/far planes; keep the native object/chunk model transform.
+   gl_Position = shadowProjection * gl_ModelViewMatrix * gl_Vertex;
    gl_Position.xyz = getShadowDistortion(gl_Position.xyz);
 
    texUV = (gl_TextureMatrix[0] * gl_MultiTexCoord0).st;
