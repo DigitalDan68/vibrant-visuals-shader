@@ -491,17 +491,19 @@ void main() {
    float albedoLuma = luma(albedo.rgb);
 
    #ifdef ENABLE_SHADOWS
+      vec2 shadowCache = vec2(-1.0);
       float materialDiffuse = diffuse;
       #ifdef TERRAIN_LABPBR
          if (pbrIsThin < 0.5) materialDiffuse = pbrDiffuseScale * clamp(2.5 * dot(N, normalize(view2eye(shadowLightPosition))), -0.3333, 1.0);
       #endif
-      float lightStrength = getLightStrength(materialDiffuse, lightUV.t, feetPos, shadowReceiverNormal);
+      float lightStrength = getLightStrength(materialDiffuse, lightUV.t, feetPos, shadowReceiverNormal, shadowCache);
       float lightBrightness = max(0.0, LIGHT_BRIGHTNESS - 0.5*pow3(albedoLuma));
 
       lightStrength = max(lightStrength, 0.75*lightSourceLevel);
 
       ambient.rgb *= mix(SHADOW_COLOR, vec3(1.0), lightStrength);
-      ambient.rgb *= 0.75 + (lightBrightness * lightStrength) * lightColor * getGlassShadowTint(feetPos);
+      vec3 glassShadowTint = getGlassShadowTint(feetPos);
+      ambient.rgb *= 0.75 + (lightBrightness * lightStrength) * lightColor * glassShadowTint;
    #endif
 
    // Bias only the field lookup into air; evaluate falloff at the actual surface.
@@ -542,7 +544,7 @@ ambient.rgb += getTorchColor(lightUV.s, ambient.rgb, feetPos, blockLightNormal);
       #if defined ENABLE_SHADOWS || (defined GBUFFERS_HAND && defined OVERWORLD)
          #ifdef ENABLE_SHADOWS
          vec3 L = normalize(view2eye(shadowLightPosition));
-         float visibility = getLightStrength(1.0, lightUV.t, feetPos, shadowReceiverNormal);
+         float visibility = getLightStrength(1.0, lightUV.t, feetPos, shadowReceiverNormal, shadowCache);
          #else
          // Keep held-tool directional highlights even when shadow maps are disabled.
          vec3 sunDirection = view2eye(sunPosition);
@@ -553,7 +555,7 @@ ambient.rgb += getTorchColor(lightUV.s, ambient.rgb, feetPos, blockLightNormal);
          float daylight = clamp(0.1*abs(sunHeight) - 0.4453, 0.0, 1.0);
          lit += labSpecular(N, V, L, pbrF0, pbrRoughness) * lightColor * LIGHT_BRIGHTNESS
               #ifdef ENABLE_SHADOWS
-              * getGlassShadowTint(feetPos)
+              * glassShadowTint
               #endif
               * max(visibility, 0.0) * daylight * (1.0 - rainStrength) * pbrSpecularStrength
               * float(pbrHasSpecular);
