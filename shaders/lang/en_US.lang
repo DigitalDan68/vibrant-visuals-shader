@@ -131,7 +131,7 @@ option.WATER_ABSORPTION=Water Absorption
 option.WATER_CAUSTICS=Caustics Strength
 
 option.AUTO_EXPOSURE.comment=Meters scene brightness and gradually adapts using a persistent exposure history. Applies in Vibrant Visuals.
-option.VOLUMETRIC_SAMPLES.comment=Shadow-tested atmospheric light samples. Zero disables rays. Overworld only, within shadow distance.
+option.VOLUMETRIC_SAMPLES.comment=Atmospheric light sample budget. Short Overworld rays use fewer samples. Cave rays retain a 32-sample minimum when active. Zero disables rays.
 option.SKY_REFLECTIONS.comment=Sky reflection fallback for smooth materials when screen-space reflections miss.
 option.WATER_CAUSTICS.comment=Brighter world-pixel-aligned light patterns on submerged surfaces, visible above and below water. Applies in Vibrant Visuals.
 
@@ -273,7 +273,7 @@ option.WATER_SEDIMENT.comment=More produces murkier red/brown water.
 option.WATER_BIOME_COLOR=Biome Water Color Contribution
 
 option.WATER_VOLUMETRIC_SAMPLES=Water Volumetric Quality
-option.WATER_VOLUMETRIC_SAMPLES.comment=Samples for water fog and sunlight shafts, independent of atmospheric volumetrics. Zero uses uniform water fog without shafts. Maximum 128.
+option.WATER_VOLUMETRIC_SAMPLES.comment=Sample budget for water fog and sunlight shafts. Short water paths use fewer samples. Zero uses uniform water fog without shafts. Maximum 128.
 
 option.WATER_LIGHT_SHAFTS=Water Light Shafts
 option.WATER_LIGHT_SHAFTS.comment=Underwater sunlight shafts. Enabled by the Ultra preset; disabled by other presets.

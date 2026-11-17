@@ -104,6 +104,13 @@ float vvForwardPhase(float cosine) {
    float g = 0.55;
    return (1.0-g*g)/pow(max(1.0+g*g-2.0*g*cosine,0.01),1.5);
 }
+// Use the selected budget on long rays and keep a minimum on short rays.
+int vvVolumeSampleCount(float distance, float fullBudgetDistance, int budget) {
+   int shortRayMinimum = min(budget,8);
+   int distanceSamples = int(ceil(float(budget)*min(distance/fullBudgetDistance,1.0)));
+   return max(shortRayMinimum,distanceSamples);
+}
+
 vec3 vvVolumetricsBetween(vec3 scene,vec3 airStart,vec3 viewPos) {
 #if COLOR_GRADING == 1 && VOLUMETRIC_SAMPLES > 0 && defined ENABLE_SHADOWS && defined OVERWORLD && defined ENABLE_FOG
    if (VOLUMETRIC_STRENGTH <= 0.0) return scene;
@@ -144,7 +151,7 @@ vec3 vvVolumetricsBetween(vec3 scene,vec3 airStart,vec3 viewPos) {
    twilight = smoothstep(-0.025,0.035,sunUp)*(1.0-smoothstep(0.12,0.35,sunUp))*TWILIGHT_RAY_STRENGTH;
 #endif
    vec3 ambient = pow(max(isEyeInWater == 1 ? skyColor : vvDryBiomeFogColor(fogColor),vec3(0.0)),vec3(2.2))*0.35;
-   int raySamples = VOLUMETRIC_SAMPLES;
+   int raySamples = vvVolumeSampleCount(range,96.0,VOLUMETRIC_SAMPLES);
    // Eight outdoor haze steps can jump entirely over a narrow cave sunbeam.
    // Retain the selected quality above this cave-only minimum (maximum 128).
    if(caveWeight*caveLightStrength>0.001) raySamples=max(raySamples,32);
@@ -616,7 +623,8 @@ vec3 vvWaterFog(vec3 scene, vec3 startPosition, vec3 endPosition) {
 #endif
 
 #if WATER_VOLUMETRIC_SAMPLES > 0
-   int waterSamples = WATER_VOLUMETRIC_SAMPLES;
+   // Preserve fine sampling within the 30-block light shaft range.
+   int waterSamples = vvVolumeSampleCount(distanceInWater,24.0,WATER_VOLUMETRIC_SAMPLES);
    float stepLength = distanceInWater / float(waterSamples);
    float sampleOffset=vvVolumeSampleOffset();
 #if defined OVERWORLD && defined WATER_LIGHT_SHAFTS

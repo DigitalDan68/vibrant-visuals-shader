@@ -48,44 +48,66 @@ vec3 waterEntryPosition(vec2 uv,float depth) {
 
 vec3 waterCelestialHighlight(vec3 surface,float nativeDepth) {
 #ifdef OVERWORLD
-         vec3 waterNormal = screen2ndc(texture2D(colortex6,texUV).xyz);
-         vec3 N = normalize(eye2view(waterNormal));
-         if (isEyeInWater == 0 && abs(waterNormal.y)>0.9) {
-            ivec2 atlasSize=textureSize(waterWaveTex,0);
-            int frameCount=max(atlasSize.y/atlasSize.x,1);
-            int frame=int(mod(floor(frameTimeCounter*10.0),float(frameCount)));
-            vec2 surfaceWorld=(view2feet(surface)+cameraPosition).xz;
-            ivec2 pixel=ivec2(floor(fract(surfaceWorld)*float(atlasSize.x)));
-            pixel.y+=frame*atlasSize.x;
-            vec3 wave=texelFetch(waterWaveTex,pixel,0).rgb*2.0-1.0;
-            N=normalize(eye2view(vec3(wave.x*2.5,wave.z,-wave.y*2.5)));
-         }
+   float strength = WATER_GLINT_BRIGHTNESS
+                  * clamp(float(WATER_MIN_GLINT)*0.1,0.0,1.0)
+                  * (1.0-rainStrength);
+   if (strength <= 0.0) return vec3(0.0);
 
-         vec3 V = normalize(-surface);
-         vec3 L = normalize(sunPosition);
-         float daylight = smoothstep(0.0,0.12,normalize(view2eye(sunPosition)).y);
-         float visible = vvSunVisibility(view2feet(surface)+cameraPosition);
-#ifndef ENABLE_SHADOWS
-         visible = clamp(float(eyeBrightnessSmooth.y)/240.0,0.0,1.0);
+   float daylight = smoothstep(0.0,0.12,normalize(view2eye(sunPosition)).y);
+   float moonElevation = normalize(view2eye(moonPosition)).y;
+   float moonVisibility = smoothstep(0.0,0.12,moonElevation)*(1.0-daylight);
+   float phaseDistance = min(float(moonPhase),8.0-float(moonPhase));
+   float lunarPhase = clamp(1.0-phaseDistance/4.0,0.0,1.0);
+   float sunWeight = daylight*WATER_SUN_GLINT;
+   float moonWeight = moonVisibility*lunarPhase*WATER_MOON_GLINT;
+   if (sunWeight <= 0.0 && moonWeight <= 0.0) return vec3(0.0);
+
+   float surfaceSky = clamp((texture2D(colortex2,texUV).a-0.6)/0.4,0.0,1.0);
+   float visible = smoothstep(0.25,0.9,surfaceSky);
+   if (visible <= 0.0) return vec3(0.0);
+#ifdef ENABLE_SHADOWS
+   visible *= vvSunVisibility(view2feet(surface)+cameraPosition);
+#else
+   visible *= clamp(float(eyeBrightnessSmooth.y)/240.0,0.0,1.0);
 #endif
-         visible *= smoothstep(0.25,0.9,clamp((texture2D(colortex2,texUV).a-0.6)/0.4,0.0,1.0));
-         float reflectedSun = max(dot(reflect(-V,N),L),0.0);
-         vec3 sunTint = mix(vec3(1.0,0.62,0.35),vec3(1.0,0.95,0.85),daylight);
-         vec3 highlight = (vec3(3.0*pow(reflectedSun,1024.0)+0.15*pow(reflectedSun,128.0))+labSpecular(N,V,L,vec3(0.02),0.04)+0.12*labSpecular(N,V,L,vec3(0.02),0.12))*sunTint*daylight*visible
-                        * WATER_SUN_GLINT*WATER_GLINT_BRIGHTNESS*clamp(float(WATER_MIN_GLINT)*0.1,0.0,1.0)*(1.0-rainStrength);
-         vec3 moonL = normalize(moonPosition);
-         float moonElevation = normalize(view2eye(moonPosition)).y;
-         float moonVisibility = smoothstep(0.0,0.12,moonElevation)*(1.0-daylight);
-         float phaseDistance = min(float(moonPhase),8.0-float(moonPhase));
-         float lunarPhase = clamp(1.0-phaseDistance/4.0,0.0,1.0);
-         float reflectedMoon = max(dot(reflect(-V,N),moonL),0.0);
-         vec3 moonTint = MOON_COLOR/max(max(MOON_COLOR.r,max(MOON_COLOR.g,MOON_COLOR.b)),0.001);
-         vec3 moonLobe = vec3(3.0*pow(reflectedMoon,1024.0)+0.15*pow(reflectedMoon,128.0))
-                       +labSpecular(N,V,moonL,vec3(0.02),0.04)+0.12*labSpecular(N,V,moonL,vec3(0.02),0.12);
-         highlight += moonLobe*moonTint*moonVisibility*lunarPhase*visible*WATER_MOON_GLINT
-                    *WATER_GLINT_BRIGHTNESS*clamp(float(WATER_MIN_GLINT)*0.1,0.0,1.0)*(1.0-rainStrength);
-         float textureMask = nativeDepth >= 1.0 ? 1.0 : clamp(texture2D(colortex7,texUV).y,0.0,1.0);
-         return highlight*mix(1.0,textureMask,clamp(WATER_TEXTURE_OVERLAY,0.0,1.0));
+   if (visible <= 0.0) return vec3(0.0);
+
+   vec3 waterNormal = screen2ndc(texture2D(colortex6,texUV).xyz);
+   vec3 N = normalize(eye2view(waterNormal));
+   if (isEyeInWater == 0 && abs(waterNormal.y)>0.9) {
+      ivec2 atlasSize=textureSize(waterWaveTex,0);
+      int frameCount=max(atlasSize.y/atlasSize.x,1);
+      int frame=int(mod(floor(frameTimeCounter*10.0),float(frameCount)));
+      vec2 surfaceWorld=(view2feet(surface)+cameraPosition).xz;
+      ivec2 pixel=ivec2(floor(fract(surfaceWorld)*float(atlasSize.x)));
+      pixel.y+=frame*atlasSize.x;
+      vec3 wave=texelFetch(waterWaveTex,pixel,0).rgb*2.0-1.0;
+      N=normalize(eye2view(vec3(wave.x*2.5,wave.z,-wave.y*2.5)));
+   }
+
+   vec3 V = normalize(-surface);
+   vec3 reflection = reflect(-V,N);
+   vec3 highlight = vec3(0.0);
+   if (sunWeight > 0.0) {
+      vec3 L = normalize(sunPosition);
+      float reflectedSun = max(dot(reflection,L),0.0);
+      vec3 sunTint = mix(vec3(1.0,0.62,0.35),vec3(1.0,0.95,0.85),daylight);
+      vec3 sunLobe = vec3(3.0*pow(reflectedSun,1024.0)+0.15*pow(reflectedSun,128.0))
+                   + labSpecular(N,V,L,vec3(0.02),0.04)
+                   + 0.12*labSpecular(N,V,L,vec3(0.02),0.12);
+      highlight += sunLobe*sunTint*sunWeight;
+   }
+   if (moonWeight > 0.0) {
+      vec3 L = normalize(moonPosition);
+      float reflectedMoon = max(dot(reflection,L),0.0);
+      vec3 moonTint = MOON_COLOR/max(max(MOON_COLOR.r,max(MOON_COLOR.g,MOON_COLOR.b)),0.001);
+      vec3 moonLobe = vec3(3.0*pow(reflectedMoon,1024.0)+0.15*pow(reflectedMoon,128.0))
+                    + labSpecular(N,V,L,vec3(0.02),0.04)
+                    + 0.12*labSpecular(N,V,L,vec3(0.02),0.12);
+      highlight += moonLobe*moonTint*moonWeight;
+   }
+   float textureMask = nativeDepth >= 1.0 ? 1.0 : clamp(texture2D(colortex7,texUV).y,0.0,1.0);
+   return highlight*visible*strength*mix(1.0,textureMask,clamp(WATER_TEXTURE_OVERLAY,0.0,1.0));
 #else
    return vec3(0.0);
 #endif
